@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Estadísticas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 id="questionnaire-title">Cargando estadísticas...</h2>
+    <a href="{% url 'dashboard-page' %}" class="btn btn-secondary">Volver al Panel</a>
+</div>
+
+<div id="stats-container">
+    <p>Cargando gráficas...</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionnaireId = {{ questionnaire_id }};
+    const token = localStorage.getItem('authToken');
+    const titleEl = document.getElementById('questionnaire-title');
+    const container = document.getElementById('stats-container');
+    let charts = {};
+
+    // Proteger la página: si no hay token, redirigir al login.
+    if (!token) {
+        window.location.href = '/login/';
+        return;
+    }
+
+    function fetchStats() {
+        // Obtenemos los detalles del cuestionario (título)
+        fetch(`/api/questionnaires/${questionnaireId}/`, {
+            headers: { 'Authorization': `Token ${token}` }
+        })
+        .then(response => {
+            if (!response.ok) { throw new Error('Token inválido o cuestionario no encontrado.'); }
+            return response.json();
+        })
+        .then(data => {
+            titleEl.textContent = `Estadísticas de: ${data.title}`;
+        })
+        .catch(error => {
+            console.error("Error obteniendo el título:", error);
+            localStorage.removeItem('authToken');
+            window.location.href = '/login/';
+        });
+
+        // Obtenemos los datos de las estadísticas
+        fetch(`/api/questionnaires/${questionnaireId}/stats/`, {
+            headers: { 'Authorization': `Token ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            for (const qId in data) {
+                const questionData = data[qId];
+                const chartInstance = charts[qId];
+
+                if (chartInstance) {
+                    chartInstance.data.labels = questionData.options.map(opt => opt.option_text);
+                    chartInstance.data.datasets[0].data = questionData.options.map(opt => opt.votes);
+                    chartInstance.update();
+                } 
+                else {
+                    if (Object.keys(charts).length === 0) { container.innerHTML = ''; }
+                    
+                    const card = document.createElement('div');
+                    card.className = 'card mb-4';
+                    card.innerHTML = `<div class="card-header fw-bold">${questionData.question_text}</div>`;
+                    
+                    const canvasContainer = document.createElement('div');
+                    canvasContainer.className = 'card-body';
+                    const canvas = document.createElement('canvas');
+                    canvasContainer.appendChild(canvas);
+                    card.appendChild(canvasContainer);
+                    container.appendChild(card);
+
+                    charts[qId] = new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: questionData.options.map(opt => opt.option_text),
+                            datasets: [{
+                                label: 'Votos',
+                                data: questionData.options.map(opt => opt.votes),
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { 
+                            indexAxis: 'y',
+                            scales: { x: { beginAtZero: true } }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    fetchStats();
+    setInterval(fetchStats, 5000);
+});
+</script>
+{% endblock %}

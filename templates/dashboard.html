@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Panel de Control{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items_center mb-4">
+    <h2 id="dashboard-title">Mis Cuestionarios</h2>
+    <a href="{% url 'create-questionnaire-page' %}" class="btn btn-primary">Crear Nuevo Cuestionario</a>
+</div>
+
+<div id="questionnaire-list" class="list-group">
+    <p>Cargando...</p>
+</div>
+
+<div class="modal fade" id="qr-modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Comparte tu Encuesta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="qrcode-container" class="mb-3 d-flex justify-content-center"></div>
+                <p class="text-muted">Escanea este código o comparte la URL de abajo.</p>
+                <input type="text" class="form-control text-center" id="qr-url-input" readonly>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('authToken');
+    const listContainer = document.getElementById('questionnaire-list');
+    // Preparamos el modal de Bootstrap
+    const qrModal = new bootstrap.Modal(document.getElementById('qr-modal'));
+
+    if (!token) {
+        window.location.href = '/login/';
+        return;
+    }
+
+    function fetchQuestionnaires() {
+        fetch('/api/questionnaires/', { headers: { 'Authorization': `Token ${token}` } })
+        .then(response => {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login/';
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+            listContainer.innerHTML = '';
+            if (data.length === 0) {
+                listContainer.innerHTML = '<p>Aún no has creado ningún cuestionario.</p>';
+                return;
+            }
+
+            data.forEach(q => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item';
+                item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">${q.title}</h5>
+                            <small>Código: <strong>${q.access_code}</strong></small>
+                        </div>
+                        <div>
+                            <span class="badge ${q.is_active ? 'bg-success' : 'bg-secondary'} me-2">${q.is_active ? 'Activo' : 'Inactivo'}</span>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-dark qr-btn" data-code="${q.access_code}">QR</button>
+                                <a href="/questionnaire/${q.id}/stats/" class="btn btn-sm btn-outline-info">Estadísticas</a>
+                                <a href="/edit-questionnaire/${q.id}/" class="btn btn-sm btn-outline-primary">Editar</a>
+                                <button class="btn btn-sm ${q.is_active ? 'btn-outline-warning' : 'btn-outline-success'} toggle-btn" data-id="${q.id}">
+                                    ${q.is_active ? 'Desactivar' : 'Activar'}
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${q.id}">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+        });
+    }
+
+    // Manejador de eventos para toda la lista
+    listContainer.addEventListener('click', function(event) {
+        const target = event.target;
+        
+        // --- Lógica para el botón QR ---
+        if (target.classList.contains('qr-btn')) {
+            const accessCode = target.dataset.code;
+            const urlToShare = `${window.location.origin}/form/${accessCode}/`;
+            
+            // Preparamos el modal
+            const qrContainer = document.getElementById('qrcode-container');
+            const qrUrlInput = document.getElementById('qr-url-input');
+            
+            qrContainer.innerHTML = ''; // Limpiamos cualquier QR anterior
+            qrUrlInput.value = urlToShare;
+            
+            // Generamos el nuevo QR
+            new QRCode(qrContainer, {
+                text: urlToShare,
+                width: 200,
+                height: 200,
+            });
+            
+            // Mostramos el modal
+            qrModal.show();
+        }
+
+        // --- Lógica para los otros botones ---
+        const questionnaireId = target.dataset.id;
+        if (!questionnaireId) return;
+
+        if (target.classList.contains('toggle-btn')) {
+            fetch(`/api/questionnaires/${questionnaireId}/toggle-active/`, {
+                method: 'POST',
+                headers: { 'Authorization': `Token ${token}` }
+            }).then(() => { fetchQuestionnaires(); });
+        }
+
+        if (target.classList.contains('delete-btn')) {
+            if (confirm('¿Estás seguro de que quieres eliminar este cuestionario?')) {
+                fetch(`/api/questionnaires/${questionnaireId}/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Token ${token}` }
+                }).then(() => { fetchQuestionnaires(); });
+            }
+        }
+    });
+
+    fetchQuestionnaires();
+});
+</script>
+{% endblock %}

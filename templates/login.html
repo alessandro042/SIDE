@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Acceso{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h3 class="text-center mb-3">Iniciar Sesión (Admin)</h3>
+                <div id="admin-error-message" class="alert alert-danger d-none"></div>
+                <form id="login-form">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" id="login-btn" class="btn btn-primary w-100">Entrar</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h3 class="text-center mb-3">Contestar Encuesta</h3>
+                <div id="survey-error-message" class="alert alert-warning d-none"></div>
+                <form id="survey-code-form">
+                    <div class="mb-3">
+                        <label for="access-code" class="form-label">Introduce el Código de Acceso</label>
+                        <input type="text" class="form-control text-uppercase" id="access-code" placeholder="EJ: E5374B" required>
+                    </div>
+                    <button type="submit" class="btn btn-secondary w-100">Continuar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Lógica para el formulario de LOGIN DE ADMIN
+document.getElementById('login-btn').addEventListener('click', function(event) {
+    event.preventDefault(); 
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const errorMessage = document.getElementById('admin-error-message');
+    errorMessage.classList.add('d-none');
+
+    fetch('/auth/token/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+    })
+    .then(response => {
+        if (!response.ok) { return response.json().then(errorData => { throw errorData; }); }
+        return response.json();
+    })
+    .then(data => {
+        localStorage.setItem('authToken', data.auth_token);
+        window.location.href = '/dashboard/';
+    })
+    .catch(error => {
+        errorMessage.textContent = 'No se pudo iniciar sesión con las credenciales proporcionadas.';
+        errorMessage.classList.remove('d-none');
+    });
+});
+
+// Lógica para el CÓDIGO DE ENCUESTA
+document.getElementById('survey-code-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const accessCode = document.getElementById('access-code').value.trim().toUpperCase();
+    const surveyErrorMessage = document.getElementById('survey-error-message');
+    surveyErrorMessage.classList.add('d-none');
+
+    if (!accessCode) return;
+
+    fetch('/api/questionnaires/public/check-submission/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_code: accessCode })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.has_submitted) {
+            surveyErrorMessage.textContent = 'Ya has contestado esta encuesta anteriormente.';
+            surveyErrorMessage.classList.remove('d-none');
+        } else {
+            window.location.href = `/form/${accessCode}/`;
+        }
+    })
+    .catch(error => {
+        surveyErrorMessage.textContent = 'Ocurrió un error al verificar el código.';
+        surveyErrorMessage.classList.remove('d-none');
+    });
+});
+</script>
+{% endblock %}

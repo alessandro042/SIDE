@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestión de Usuarios</h2>
+    <button id="create-user-btn" class="btn btn-primary">Crear Nuevo Usuario</button>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Username</th>
+                <th>Rol</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="user-table-body">
+            <tr><td colspan="5" class="text-center">Cargando...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="user-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title">Crear Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="user-form">
+                    <input type="hidden" id="user-id">
+                    <div class="mb-3">
+                        <label for="user-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="user-email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="user-username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-password" class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" id="user-password">
+                        <small id="password-help" class="form-text text-muted">Dejar en blanco para no cambiarla.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-role" class="form-label">Rol</label>
+                        <select class="form-select" id="user-role">
+                            <option value="ADMIN">Admin</option>
+                            <option value="SUPER_ADMIN">Super Admin</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div id="form-error" class="alert alert-danger d-none w-100"></div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="save-user-btn" class="btn btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('authToken');
+    const userTableBody = document.getElementById('user-table-body');
+    const userModal = new bootstrap.Modal(document.getElementById('user-modal'));
+    const form = document.getElementById('user-form');
+    
+    // Proteger la página
+    if (!token) { window.location.href = '/login/'; return; }
+
+    // Función para cargar la lista de usuarios
+    function fetchUsers() {
+        fetch('/api/users/', { headers: { 'Authorization': `Token ${token}` }})
+            .then(res => {
+                if(res.status === 403) { // 403 Forbidden significa que no es Super Admin
+                    window.location.href = '/dashboard/';
+                    alert('Acceso denegado. Solo los Super Admins pueden ver esta página.');
+                    return;
+                }
+                return res.json();
+            })
+            .then(users => {
+                if (!users) return;
+                userTableBody.innerHTML = '';
+                users.forEach(user => {
+                    const row = `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.email}</td>
+                            <td>${user.username}</td>
+                            <td><span class="badge bg-info">${user.role}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${user.id}">Editar</button>
+                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${user.id}">Eliminar</button>
+                            </td>
+                        </tr>`;
+                    userTableBody.insertAdjacentHTML('beforeend', row);
+                });
+            });
+    }
+
+    // Abrir modal para crear
+    document.getElementById('create-user-btn').addEventListener('click', () => {
+        form.reset();
+        document.getElementById('user-id').value = '';
+        document.getElementById('modal-title').textContent = 'Crear Usuario';
+        document.getElementById('password-help').style.display = 'none';
+        document.getElementById('user-password').required = true;
+        userModal.show();
+    });
+
+    // Abrir modal para editar
+    userTableBody.addEventListener('click', event => {
+        if (event.target.classList.contains('edit-btn')) {
+            const userId = event.target.dataset.id;
+            // Pedir los datos de ese usuario específico
+            fetch(`/api/users/${userId}/`, { headers: { 'Authorization': `Token ${token}` }})
+                .then(res => res.json())
+                .then(user => {
+                    form.reset();
+                    document.getElementById('user-id').value = user.id;
+                    document.getElementById('user-email').value = user.email;
+                    document.getElementById('user-username').value = user.username;
+                    document.getElementById('user-role').value = user.role;
+                    document.getElementById('modal-title').textContent = 'Editar Usuario';
+                    document.getElementById('password-help').style.display = 'block';
+                    document.getElementById('user-password').required = false;
+                    userModal.show();
+                });
+        }
+
+        // Eliminar usuario
+        if (event.target.classList.contains('delete-btn')) {
+            const userId = event.target.dataset.id;
+            if (confirm(`¿Estás seguro de que quieres eliminar al usuario con ID ${userId}?`)) {
+                fetch(`/api/users/${userId}/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Token ${token}` }
+                }).then(() => fetchUsers());
+            }
+        }
+    });
+
+    // Guardar cambios (crear o editar)
+    document.getElementById('save-user-btn').addEventListener('click', () => {
+        const userId = document.getElementById('user-id').value;
+        const url = userId ? `/api/users/${userId}/` : '/api/users/';
+        const method = userId ? 'PATCH' : 'POST';
+
+        const payload = {
+            email: document.getElementById('user-email').value,
+            username: document.getElementById('user-username').value,
+            role: document.getElementById('user-role').value,
+        };
+        const password = document.getElementById('user-password').value;
+        if (password) {
+            payload.password = password;
+        }
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}`},
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (!res.ok) return res.json().then(err => { throw err; });
+            return res.json();
+        })
+        .then(() => {
+            userModal.hide();
+            fetchUsers();
+        })
+        .catch(err => {
+            const errorDiv = document.getElementById('form-error');
+            errorDiv.textContent = JSON.stringify(err);
+            errorDiv.classList.remove('d-none');
+        });
+    });
+
+    fetchUsers(); // Cargar usuarios al iniciar
+});
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Cuestionario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Crear Nuevo Cuestionario</h2>
+    <a href="{% url 'dashboard-page' %}" class="btn btn-secondary">Cancelar</a>
+</div>
+
+<form id="create-questionnaire-form">
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="questionnaire-title" class="form-label fw-bold">Título del Cuestionario</label>
+                <input type="text" class="form-control" id="questionnaire-title" required>
+            </div>
+        </div>
+    </div>
+    
+    <div id="questions-container"></div>
+    <button type="button" id="add-question-btn" class="btn btn-outline-primary mb-3">Añadir Pregunta</button>
+    <hr>
+    <div id="error-message" class="alert alert-danger d-none"></div>
+    <button type="submit" class="btn btn-success w-100">Guardar Cuestionario</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        window.location.href = '/login/';
+        return;
+    }
+
+    const questionsContainer = document.getElementById('questions-container');
+    const addQuestionBtn = document.getElementById('add-question-btn');
+    const form = document.getElementById('create-questionnaire-form');
+    const errorMessage = document.getElementById('error-message');
+    let questionCounter = 0;
+
+    addQuestionBtn.addEventListener('click', function() {
+        questionCounter++;
+        const questionCard = document.createElement('div');
+        questionCard.className = 'card mb-3 question-card';
+        questionCard.innerHTML = `
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <label class="form-label fw-bold">Pregunta ${questionCounter}</label>
+                    <button type="button" class="btn-close remove-question-btn"></button>
+                </div>
+                <input type="text" class="form-control question-text" required>
+                <div class="options-container mt-2 ps-4"></div>
+                <button type="button" class="btn btn-outline-secondary btn-sm mt-2 add-option-btn">Añadir Opción</button>
+            </div>
+        `;
+        questionsContainer.appendChild(questionCard);
+    });
+
+    questionsContainer.addEventListener('click', function(event) {
+        if (event.target.classList.contains('add-option-btn')) {
+            const optionsContainer = event.target.previousElementSibling;
+            const optionDiv = document.createElement('div');
+            optionDiv.className = 'input-group input-group-sm mb-2';
+            optionDiv.innerHTML = `
+                <span class="input-group-text">Opción:</span>
+                <input type="text" class="form-control option-text" required>
+                <button class="btn btn-outline-danger remove-option-btn" type="button">X</button>
+            `;
+            optionsContainer.appendChild(optionDiv);
+        }
+        if (event.target.classList.contains('remove-option-btn')) { event.target.closest('.input-group').remove(); }
+        if (event.target.classList.contains('remove-question-btn')) { event.target.closest('.question-card').remove(); }
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        errorMessage.classList.add('d-none');
+
+        const payload = {
+            title: document.getElementById('questionnaire-title').value,
+            questions: []
+        };
+        document.querySelectorAll('.question-card').forEach(card => {
+            const questionText = card.querySelector('.question-text').value;
+            const options = [];
+            card.querySelectorAll('.option-text').forEach(optionInput => {
+                options.push({ text: optionInput.value });
+            });
+            payload.questions.push({ text: questionText, options: options });
+        });
+
+        // 👇 URL CORREGIDA 👇
+        fetch('/api/questionnaires/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) { return response.json().then(err => { throw err; }); }
+            return response.json();
+        })
+        .then(data => {
+            alert('¡Cuestionario creado con éxito!');
+            window.location.href = '/dashboard/';
+        })
+        .catch(error => {
+            console.error('Error al crear cuestionario:', error);
+            errorMessage.textContent = 'Ocurrió un error. Asegúrate de que todas las preguntas y opciones tengan texto.';
+            errorMessage.classList.remove('d-none');
+        });
+    });
+});
+</script>
+{% endblock %}

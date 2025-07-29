@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Contestar Cuestionario{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div id="survey-content">
+        <h2 id="questionnaire-title" class="text-center mb-4">Cargando...</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header fw-bold">Preguntas</div>
+                    <div class="card-body">
+                        <form id="public-questionnaire-form">
+                            </form>
+                        <button id="finish-btn" class="btn btn-success w-100 mt-4 d-none">Finalizar Encuesta</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header fw-bold">Resultados en Vivo</div>
+                    <div class="card-body" id="charts-container">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="thank-you-message" class="card d-none">
+        <div class="card-body text-center">
+            <h2 class="card-title">¡Gracias por tus respuestas!</h2>
+            <p>Tu participación ha sido registrada.</p>
+            <a href="/" class="btn btn-secondary">Volver al inicio</a>
+        </div>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const accessCode = '{{ access_code }}';
+    const titleEl = document.getElementById('questionnaire-title');
+    const formContainer = document.getElementById('public-questionnaire-form');
+    const chartsContainer = document.getElementById('charts-container');
+    const finishBtn = document.getElementById('finish-btn');
+    
+    let chartInstances = {};
+
+    function createQuestionUI(question) { /* ... (sin cambios) ... */ }
+    function createChartUI(question) { /* ... (sin cambios) ... */ }
+    function initializeOrUpdateChart(question, stats) { /* ... (sin cambios) ... */ }
+    // (Incluyo las funciones completas al final para que solo copies y pegues una vez)
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/survey/${accessCode}/`);
+
+    socket.onmessage = function(e) { /* ... (sin cambios) ... */ };
+
+    // Lógica de Votación (MODIFICADA)
+    formContainer.addEventListener('change', function(event) {
+        if (event.target.classList.contains('option-input')) {
+            const optionId = event.target.value;
+            const questionId = event.target.name.split('-')[1];
+
+            socket.send(JSON.stringify({
+                question_id: parseInt(questionId),
+                option_id: parseInt(optionId)
+            }));
+
+            // YA NO DESHABILITAMOS LAS OPCIONES. Esto permite cambiar la respuesta.
+        }
+    });
+
+    // Lógica para el botón de Finalizar
+    finishBtn.addEventListener('click', function() {
+        socket.close();
+        document.getElementById('survey-content').classList.add('d-none');
+        document.getElementById('thank-you-message').classList.remove('d-none');
+    });
+
+    let questionnaireData = null;
+    fetch(`/api/questionnaires/public/forms/${accessCode}/`)
+        .then(res => {
+            // Este bloque se mejora en el punto 4
+            if (!res.ok) { throw new Error('Código no válido o encuesta inactiva.'); }
+            return res.json();
+        })
+        .then(data => {
+            questionnaireData = data;
+            titleEl.textContent = data.title;
+            data.questions.forEach(question => {
+                createQuestionUI(question);
+                createChartUI(question);
+            });
+            finishBtn.classList.remove('d-none'); // Mostramos el botón de finalizar
+        })
+        .catch(error => {
+            // Este bloque se mejora en el punto 4
+            titleEl.textContent = 'Error';
+            chartsContainer.innerHTML = `<p class="text-danger text-center">${error.message}</p>`;
+        });
+
+    // --- Definiciones completas de las funciones de UI (sin cambios) ---
+    function createQuestionUI(question) {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'mb-4';
+        questionDiv.id = `question-block-${question.id}`;
+        let optionsHtml = '';
+        question.options.forEach(option => {
+            optionsHtml += `<div class="form-check"><input class="form-check-input option-input" type="radio" name="question-${question.id}" value="${option.id}"><label class="form-check-label">${option.text}</label></div>`;
+        });
+        questionDiv.innerHTML = `<p class="fw-bold">${question.text}</p>${optionsHtml}`;
+        formContainer.appendChild(questionDiv);
+    }
+    function createChartUI(question) {
+        const chartDiv = document.createElement('div');
+        chartDiv.className = 'mb-4';
+        chartDiv.innerHTML = `<p class="fw-bold small">${question.text}</p><canvas id="chart-${question.id}"></canvas>`;
+        chartsContainer.appendChild(chartDiv);
+    }
+    function initializeOrUpdateChart(question, stats) {
+        const ctx = document.getElementById(`chart-${question.id}`).getContext('2d');
+        const labels = question.options.map(opt => opt.text);
+        const data = question.options.map(opt => stats[opt.id] || 0);
+        if (chartInstances[question.id]) {
+            chartInstances[question.id].data.datasets[0].data = data;
+            chartInstances[question.id].update();
+        } else {
+            chartInstances[question.id] = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Votos', data: data, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] }, options: { indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
+        }
+    }
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'initial_stats') {
+            for (const qId in data.stats) {
+                const question = questionnaireData.questions.find(q => q.id == qId);
+                initializeOrUpdateChart(question, data.stats[qId]);
+            }
+        }
+        if (data.type === 'stats_update') {
+            const question = questionnaireData.questions.find(q => q.id == data.question_id);
+            initializeOrUpdateChart(question, data.stats);
+        }
+    };
+});
+</script>
+{% endblock %}
