@@ -8,7 +8,7 @@
 Un sistema de encuestas dinámico e interactivo, diseñado para ofrecer retroalimentación instantánea a través de gráficas que se actualizan en vivo para todos los participantes.
 
 <p align="center">
-  <img src="https://i.imgur.com/gK6y3k7.png" alt="Banner de la aplicación" width="800"/>
+  <img src="./assets/sidelogo.jpg" alt="Banner de la aplicación" width="800"/>
 </p>
 
 ---
