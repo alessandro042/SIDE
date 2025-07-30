@@ -8,7 +8,7 @@
 Un sistema de encuestas dinámico e interactivo, diseñado para ofrecer retroalimentación instantánea a través de gráficas que se actualizan en vivo para todos los participantes.
 
 <p align="center">
-  <img src="./assets/sidelogo.jpg" alt="Banner de la aplicación" width="600"/>
+  <img src="./assets/sidelogo.jpg" alt="Banner de la aplicación" width="800"/>
 </p>
 
 ---
@@ -89,7 +89,7 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
 
 2.  **Crea y activa un entorno virtual:**
     ```bash
-    # Crear el entorno (usa venv, .venv, o el nombre que prefieras)
+    # Crear el entorno
     python -m venv venv
 
     # Activar en Windows (PowerShell)
@@ -99,16 +99,19 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
     source venv/bin/activate
     ```
 
-3.  **Crea el archivo de dependencias (si no existe):**
-    *Este es un paso importante para que otros puedan instalar tu proyecto.*
+3.  **Instala las dependencias:**
+    *Con el entorno virtual activo, ejecuta los siguientes comandos.*
+
     ```bash
-    # Este comando crea el archivo requirements.txt
-    pip freeze > requirements.txt
-    ```
-    *Si ya tienes el archivo, simplemente instala las dependencias:*
-    ```bash
-    # Asegúrate de usar python -m pip para evitar problemas
-    python -m pip install -r requirements.txt
+    # (Opcional pero recomendado) Actualizar pip a la última versión
+    python -m pip install --upgrade pip
+
+    # Instalar las librerías principales de Django y la API
+    # Nota: djangorestframework-simplejwt es instalado automáticamente como dependencia de djoser
+    python -m pip install django djangorestframework Pillow djoser channels mysqlclient
+
+    # Instalar el servidor ASGI con sus dependencias estándar (incluye websockets)
+    python -m pip install "uvicorn[standard]"
     ```
 
 4.  **Configura tu base de datos:**
