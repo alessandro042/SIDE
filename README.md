@@ -83,7 +83,7 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone https://URL_DE_TU_REPO.git
+    git clone https://github.com/alessandro042/SIDE
     cd NOMBRE_DEL_PROYECTO
     ```
 
@@ -107,10 +107,9 @@ Sigue estos pasos para levantar el proyecto en un entorno de desarrollo local.
     python -m pip install --upgrade pip
 
     # Instalar las librerías principales de Django y la API
-    # Nota: djangorestframework-simplejwt es instalado automáticamente como dependencia de djoser
     python -m pip install django djangorestframework Pillow djoser channels mysqlclient
 
-    # Instalar el servidor ASGI con sus dependencias estándar (incluye websockets)
+    # Instalar el servidor ASGI con sus dependencias estándar 
     python -m pip install "uvicorn[standard]"
     ```
 
