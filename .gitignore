@@ -1,0 +1,33 @@
+# Archivos compilados de Python
+*.pyc
+__pycache__/
+
+# Archivos de base de datos
+*.sqlite3
+db.sqlite3
+
+# Entornos virtuales
+venv/
+env/
+
+# Archivos de configuración del IDE (si usas VS Code)
+.vscode/
+
+# Archivos de medios (subidos por usuarios)
+# Descomenta la siguiente línea si quieres ignorar la carpeta 'media'
+# media/
+
+# Archivos estáticos recolectados (si los generas en un directorio específico)
+# Descomenta la siguiente línea si quieres ignorar la carpeta 'staticfiles'
+# staticfiles/
+
+# Archivos de logs
+*.log
+logs/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Archivos de configuración sensibles (ej. claves API, credenciales)
+# settings_local.py

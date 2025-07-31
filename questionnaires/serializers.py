@@ -1,7 +1,5 @@
-# questionnaires/serializers.py
-
 from rest_framework import serializers
-from .models import Questionnaire, Question, Option
+from .models import Questionnaire, Question, Option, Submission # Asegúrate que Submission esté importado si lo usas en to_representation
 
 # --- Serializers para el Admin ---
 
@@ -62,38 +60,64 @@ class QuestionnaireAdminSerializer(serializers.ModelSerializer):
         questions_data = validated_data.get('questions', [])
         existing_questions = {q.id: q for q in instance.questions.all()}
         incoming_question_ids = {q.get('id') for q in questions_data if q.get('id')}
+        
+        # Eliminar preguntas que ya no están
         for q_id, question in existing_questions.items():
             if q_id not in incoming_question_ids:
-                question.delete()
+                question.delete() # O marcar como borrado lógico si tu modelo lo soporta
+
         for question_data in questions_data:
             question_id = question_data.get('id', None)
             if question_id:
+                # Actualizar pregunta existente
                 question = existing_questions[question_id]
                 question.text = question_data.get('text', question.text)
                 question.save()
             else:
+                # Crear nueva pregunta
                 question = Question.objects.create(questionnaire=instance, text=question_data['text'])
+            
             options_data = question_data.get('options', [])
             existing_options = {opt.id: opt for opt in question.options.all()}
             incoming_option_ids = {opt.get('id') for opt in options_data if opt.get('id')}
+
+            # Eliminar opciones que ya no están
             for opt_id, option in existing_options.items():
                 if opt_id not in incoming_option_ids:
-                    option.delete()
+                    option.delete() # O marcar como borrado lógico
+
             for option_data in options_data:
                 option_id = option_data.get('id', None)
                 if option_id:
+                    # Actualizar opción existente
                     option = existing_options[option_id]
                     option.text = option_data.get('text', option.text)
                     option.save()
                 else:
+                    # Crear nueva opción
                     Option.objects.create(question=question, text=option_data['text'])
         return instance
 
 
 class QuestionnaireListSerializer(serializers.ModelSerializer):
+    # Añadimos un campo total_submissions para que aparezca en la respuesta
+    total_submissions = serializers.IntegerField(read_only=True) 
+
     class Meta:
         model = Questionnaire
-        fields = ['id', 'title', 'is_active', 'access_code']
+        fields = ['id', 'title', 'is_active', 'access_code', 'total_submissions']
+        
+    def to_representation(self, instance):
+        """
+        Sobreescribe to_representation para añadir el conteo de submissions.
+        """
+        representation = super().to_representation(instance)
+        # Calcula el conteo de submissions relacionados a este cuestionario
+        # Asume que tu modelo Questionnaire tiene una relación inversa a Submission
+        # Si tienes un related_name='submissions' en tu FK en Submission, usa instance.submissions.count()
+        # Si no, usa el nombre por defecto: instance.submission_set.count()
+        representation['total_submissions'] = instance.submission_set.count() 
+        return representation
 
 
 # --- Serializers para el Usuario Público (Evaluado) ---

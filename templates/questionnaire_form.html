@@ -3,28 +3,211 @@
 {% block title %}Crear Cuestionario{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Crear Nuevo Cuestionario</h2>
-    <a href="{% url 'dashboard-page' %}" class="btn btn-secondary">Cancelar</a>
+<style>
+    /* Paleta de colores: Neutra con acentos inspirados en Oracle Red (copiada de base.html) */
+    :root {
+        --main-bg-light: #F8FAFD;
+        --sidebar-bg: #FFFFFF;
+        --sidebar-hover-bg: #F4F7FB;
+        --oracle-red-accent: #A83C3C;
+        --oracle-red-hover: #8B2F2F;
+        --oracle-red-alert: #D65A5A;
+        --text-dark-blue-grey: #333F4F;
+        --text-medium-grey: #6C7A89;
+        --border-light-grey: #DDE2E7;
+        --input-focus-border: #9BB8D3;
+        --neutral-white: #FFFFFF;
+        --error-bg-light: #FCEDED;
+        --warning-bg-light: #FFFBF0;
+        --success-bg-light: #E9FBF3;
+        --success-text: #66BB6A; /* Verde suave para acciones de éxito */
+    }
+
+    @supports (background-color: rgb(var(--text-dark-blue-grey-rgb))) {
+        :root {
+            --text-dark-blue-grey-rgb: 51, 63, 79;
+            --text-medium-grey-rgb: 108, 122, 137;
+            --oracle-red-accent-rgb: 168, 60, 60;
+            --oracle-red-hover-rgb: 139, 47, 47;
+            --oracle-red-alert-rgb: 214, 90, 90;
+        }
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--main-bg-light);
+    }
+    
+    .form-main-container { padding: 35px 25px; max-width: 900px; margin: 20px auto; background-color: var(--neutral-white); border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); overflow: hidden; position: relative; }
+    .form-main-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(var(--text-dark-blue-grey-rgb), 0.05), rgba(var(--text-medium-grey-rgb), 0.02)); opacity: 0.7; border-radius: 15px; z-index: 0; }
+    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border-light-grey); position: relative; z-index: 1; }
+    .form-header h2 { font-family: 'Montserrat', sans-serif; font-size: 1.6em; color: var(--text-dark-blue-grey); font-weight: 700; margin: 0; }
+    .btn-secondary-custom { background-color: var(--main-bg-light); color: var(--text-medium-grey); padding: 7px 16px; border: 1px solid var(--border-light-grey); border-radius: 8px; font-size: 0.85em; cursor: pointer; transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; font-weight: 500; text-decoration: none; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
+    .btn-secondary-custom:hover { background-color: var(--border-light-grey); color: var(--text-dark-blue-grey); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); }
+    .btn-success-custom { background-color: var(--oracle-red-accent); color: var(--neutral-white); padding: 10px 20px; border: none; border-radius: 10px; font-size: 0.95em; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; font-weight: 600; width: 100%; max-width: 400px; margin: 30px auto 0 auto; display: block; box-shadow: 0 5px 12px rgba(var(--oracle-red-accent-rgb), 0.3); position: relative; z-index: 1; }
+    .btn-success-custom:hover { background-color: var(--oracle-red-hover); transform: translateY(-2px); box-shadow: 0 7px 18px rgba(var(--oracle-red-hover-rgb), 0.4); }
+    .form-label { font-weight: 600 !important; color: var(--text-dark-blue-grey); font-size: 0.85em; margin-bottom: 6px; position: relative; z-index: 1; }
+    .form-control { border-radius: 8px; padding: 9px 12px; border: 1px solid var(--border-light-grey); font-size: 0.9em; transition: border-color 0.3s ease, box-shadow 0.3s ease; width: 100%; max-width: 700px; box-sizing: border-box; background-color: var(--neutral-white); position: relative; z-index: 1; }
+    .form-control:focus { border-color: var(--input-focus-border); box-shadow: 0 0 0 3px rgba(155, 184, 211, 0.2); outline: none; background-color: var(--neutral-white); }
+    .question-card { background-color: var(--panel-right-bg); border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-light-grey); padding: 25px; margin-bottom: 25px !important; position: relative; z-index: 1; overflow: hidden; }
+    .question-card::before { content: ''; position: absolute; top: 0; left: 0; width: 6px; height: 100%; background-color: var(--oracle-red-accent); border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+    .question-card .card-body { padding-left: 10px; }
+    .options-container { padding-left: 0px; margin-top: 15px; }
+    .input-group { margin-bottom: 12px !important; position: relative; z-index: 1; }
+    .input-group .input-group-text, .input-group .form-control { height: auto; padding: 7px 10px; font-size: 0.8em; border-radius: 8px; border: 1px solid var(--border-light-grey); }
+    .input-group .input-group-text { background-color: var(--main-bg-light); color: var(--text-medium-grey); border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .input-group .form-control { border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0; max-width: 500px; background-color: var(--neutral-white); }
+    .btn-add-question-custom { background-color: transparent; border: 2px solid var(--oracle-red-accent); color: var(--oracle-red-accent); padding: 8px 20px; border-radius: 10px; font-size: 0.9em; cursor: pointer; transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; box-shadow: 0 3px 8px rgba(var(--oracle-red-accent-rgb), 0.15); position: relative; z-index: 1; }
+    .btn-add-question-custom:hover { background-color: var(--oracle-red-accent); color: var(--neutral-white); transform: translateY(-2px); box-shadow: 0 5px 12px rgba(var(--oracle-red-accent-rgb), 0.3); }
+    .btn-add-question-custom svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-add-option-custom { background-color: transparent; border: 1px solid var(--text-medium-grey); color: var(--text-medium-grey); padding: 5px 10px; border-radius: 6px; font-size: 0.75em; cursor: pointer; transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05); }
+    .btn-add-option-custom:hover { background-color: var(--text-medium-grey); color: var(--neutral-white); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); }
+    .btn-add-option-custom svg { width: 12px; height: 12px; fill: currentColor; }
+    .btn-close-custom { background: none; border: none; font-size: 1.1em; color: var(--text-medium-grey); cursor: pointer; transition: color 0.3s ease, transform 0.2s ease; padding: 0; display: flex; align-items: center; justify-content: center; }
+    .btn-close-custom svg { width: 20px; height: 20px; fill: currentColor; }
+    .btn-close-custom:hover { color: var(--oracle-red-alert); transform: rotate(10deg); }
+    .btn-remove-option-custom { background-color: transparent; border: 1px solid var(--border-light-grey); border-left: none; color: var(--oracle-red-alert); cursor: pointer; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-top-right-radius: 8px; border-bottom-right-radius: 8px; transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease; position: relative; z-index: 1; }
+    .btn-remove-option-custom:hover { background-color: var(--oracle-red-alert); color: var(--neutral-white); box-shadow: 0 2px 6px rgba(var(--oracle-red-alert-rgb), 0.2); }
+    .btn-remove-option-custom svg { width: 14px; height: 14px; fill: currentColor; }
+    .alert-danger-custom { background-color: var(--error-bg-light); color: var(--oracle-red-alert); border: 1px solid var(--oracle-red-alert); border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 0.85em; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; box-shadow: 0 2px 6px rgba(var(--oracle-red-alert-rgb), 0.1); position: relative; z-index: 1; }
+    .d-none { display: none !important; }
+
+    /* ============================================= */
+    /* INICIO: ESTILOS DEL MODAL DE ÉXITO AGREGADOS  */
+    /* ============================================= */
+    .success-modal .modal-content {
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        text-align: center;
+        background-color: var(--neutral-white);
+        border: none;
+    }
+    .success-modal .modal-header {
+        border-bottom: none;
+        padding-bottom: 0;
+        display: flex;
+        justify-content: center;
+        position: relative;
+        font-family: 'Montserrat', sans-serif;
+    }
+    .success-modal .modal-title {
+        font-weight: 600;
+        color: var(--text-dark-blue-grey); /* Título en color oscuro principal */
+        font-size: 1.4em;
+        margin: 0;
+    }
+    .success-modal .modal-body {
+        padding: 15px 0;
+        font-size: 0.9em;
+        color: var(--text-medium-grey);
+    }
+    .success-modal .modal-footer {
+        border-top: none;
+        padding-top: 10px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+    .success-modal .btn-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 1.1em;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+    .success-modal .btn-close:hover { opacity: 1; }
+    .success-icon {
+        width: 50px;
+        height: 50px;
+        margin: 0 auto 15px auto;
+        display: block;
+    }
+    .success-icon svg {
+        width: 100%;
+        height: 100%;
+        fill: var(--success-text); /* Icono de éxito en color verde */
+    }
+
+    /* Botones del Modal (reutilizados del otro archivo) */
+    .btn-modal-primary-custom { 
+        background-color: var(--oracle-red-accent);
+        color: var(--neutral-white);
+        padding: 8px 25px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.85em;
+        cursor: pointer; 
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; 
+        font-weight: 600; 
+    }
+    .btn-modal-primary-custom:hover {
+        background-color: var(--oracle-red-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(var(--oracle-red-hover-rgb), 0.3);
+    }
+    /* FIN: ESTILOS DEL MODAL */
+
+    @media (max-width: 768px) { 
+        .form-main-container { padding: 20px 15px; } 
+        .form-header { flex-direction: column; align-items: flex-start; } 
+        .form-header h2 { font-size: 1.4em; } 
+        .question-card { padding: 20px; } 
+        .success-modal .modal-title { font-size: 1.2em; }
+        .success-modal .modal-body { font-size: 0.8em; }
+        .success-icon { width: 40px; height: 40px; }
+    }
+</style>
+
+<div class="form-main-container">
+    <div class="form-header">
+        <h2>Crear Nuevo Cuestionario</h2>
+        <a href="{% url 'dashboard-page' %}" class="btn-secondary-custom">Cancelar</a>
+    </div>
+
+    <form id="create-questionnaire-form">
+        <div class="card mb-4" style="box-shadow: none; border: none; background-color: transparent;">
+            <div class="card-body" style="padding: 0;">
+                <div class="mb-4">
+                    <label for="questionnaire-title" class="form-label">Título del Cuestionario</label>
+                    <input type="text" class="form-control" id="questionnaire-title" placeholder="Ej: Encuesta de Satisfacción del Cliente" required>
+                </div>
+            </div>
+        </div>
+        
+        <div id="questions-container"></div>
+        <button type="button" id="add-question-btn" class="btn-add-question-custom">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>
+            Añadir Pregunta
+        </button>
+        
+        <hr style="border-color: var(--border-light-grey); margin: 30px 0;">
+        <div id="error-message" class="alert-danger-custom d-none"></div>
+        
+        <button type="submit" class="btn-success-custom">Guardar Cuestionario</button>
+    </form>
 </div>
 
-<form id="create-questionnaire-form">
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="mb-3">
-                <label for="questionnaire-title" class="form-label fw-bold">Título del Cuestionario</label>
-                <input type="text" class="form-control" id="questionnaire-title" required>
+<div class="modal fade success-modal" id="success-modal" tabindex="-1" aria-labelledby="success-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="success-modal-title">¡Cuestionario Creado!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <span class="success-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>
+                </span>
+                <p>Tu cuestionario ha sido guardado exitosamente.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-primary-custom" id="success-modal-confirm-btn">Aceptar</button>
             </div>
         </div>
     </div>
-    
-    <div id="questions-container"></div>
-    <button type="button" id="add-question-btn" class="btn btn-outline-primary mb-3">Añadir Pregunta</button>
-    <hr>
-    <div id="error-message" class="alert alert-danger d-none"></div>
-    <button type="submit" class="btn btn-success w-100">Guardar Cuestionario</button>
-</form>
-
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('authToken');
@@ -37,6 +220,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const addQuestionBtn = document.getElementById('add-question-btn');
     const form = document.getElementById('create-questionnaire-form');
     const errorMessage = document.getElementById('error-message');
+    
+    // Inicializar el nuevo modal de Bootstrap
+    const successModal = new bootstrap.Modal(document.getElementById('success-modal'));
+    
     let questionCounter = 0;
 
     addQuestionBtn.addEventListener('click', function() {
@@ -45,32 +232,44 @@ document.addEventListener('DOMContentLoaded', function() {
         questionCard.className = 'card mb-3 question-card';
         questionCard.innerHTML = `
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <label class="form-label fw-bold">Pregunta ${questionCounter}</label>
-                    <button type="button" class="btn-close remove-question-btn"></button>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="form-label">Pregunta ${questionCounter}</label>
+                    <button type="button" class="btn-close-custom remove-question-btn" title="Eliminar Pregunta">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M135.2 17.7C140.6 6.5 152 0 164.8 0H283.2c12.8 0 24.2 6.5 29.6 17.7L330.9 64H400c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32s14.3-32 32-32h69.1L135.2 17.7zM248 248V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm-96 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm192 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zM416 128H32v320c0 35.3 28.7 64 64 64H352c35.3 0 64-28.7 64-64V128z"/></svg>
+                    </button>
                 </div>
-                <input type="text" class="form-control question-text" required>
-                <div class="options-container mt-2 ps-4"></div>
-                <button type="button" class="btn btn-outline-secondary btn-sm mt-2 add-option-btn">Añadir Opción</button>
+                <input type="text" class="form-control question-text" placeholder="Ej: ¿Qué tan satisfecho está con nuestro servicio?" required>
+                <div class="options-container mt-3"></div>
+                <button type="button" class="btn-add-option-custom add-option-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>
+                    Añadir Opción
+                </button>
             </div>
         `;
         questionsContainer.appendChild(questionCard);
     });
 
     questionsContainer.addEventListener('click', function(event) {
-        if (event.target.classList.contains('add-option-btn')) {
-            const optionsContainer = event.target.previousElementSibling;
+        if (event.target.classList.contains('add-option-btn') || event.target.closest('.add-option-btn')) {
+            const targetButton = event.target.closest('.add-option-btn');
+            const optionsContainer = targetButton.previousElementSibling;
             const optionDiv = document.createElement('div');
-            optionDiv.className = 'input-group input-group-sm mb-2';
+            optionDiv.className = 'input-group mb-3';
             optionDiv.innerHTML = `
                 <span class="input-group-text">Opción:</span>
-                <input type="text" class="form-control option-text" required>
-                <button class="btn btn-outline-danger remove-option-btn" type="button">X</button>
+                <input type="text" class="form-control option-text" placeholder="Ej: Muy satisfecho" required>
+                <button class="btn-remove-option-custom remove-option-btn" type="button" title="Eliminar Opción">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M135.2 17.7C140.6 6.5 152 0 164.8 0H283.2c12.8 0 24.2 6.5 29.6 17.7L330.9 64H400c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32s14.3-32 32-32h69.1L135.2 17.7zM248 248V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm-96 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm192 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zM416 128H32v320c0 35.3 28.7 64 64 64H352c35.3 0 64-28.7 64-64V128z"/></svg>
+                </button>
             `;
             optionsContainer.appendChild(optionDiv);
         }
-        if (event.target.classList.contains('remove-option-btn')) { event.target.closest('.input-group').remove(); }
-        if (event.target.classList.contains('remove-question-btn')) { event.target.closest('.question-card').remove(); }
+        if (event.target.classList.contains('remove-option-btn') || event.target.closest('.remove-option-btn')) {
+             event.target.closest('.input-group').remove();
+        }
+        if (event.target.classList.contains('remove-question-btn') || event.target.closest('.remove-question-btn')) {
+             event.target.closest('.question-card').remove();
+        }
     });
 
     form.addEventListener('submit', function(event) {
@@ -81,16 +280,29 @@ document.addEventListener('DOMContentLoaded', function() {
             title: document.getElementById('questionnaire-title').value,
             questions: []
         };
+        
+        let isValid = true;
+        
         document.querySelectorAll('.question-card').forEach(card => {
-            const questionText = card.querySelector('.question-text').value;
+            const questionText = card.querySelector('.question-text').value.trim();
+            if (!questionText) isValid = false;
+            
             const options = [];
             card.querySelectorAll('.option-text').forEach(optionInput => {
-                options.push({ text: optionInput.value });
+                const optionText = optionInput.value.trim();
+                if (optionText) options.push({ text: optionText });
             });
+
+            if (options.length === 0) isValid = false;
             payload.questions.push({ text: questionText, options: options });
         });
 
-        // 👇 URL CORREGIDA 👇
+        if (!isValid) {
+            errorMessage.textContent = 'Asegúrate de que el título, todas las preguntas y todas las opciones tengan texto.';
+            errorMessage.classList.remove('d-none');
+            return;
+        }
+
         fetch('/api/questionnaires/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
@@ -101,14 +313,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            alert('¡Cuestionario creado con éxito!');
-            window.location.href = '/dashboard/';
+            // 👇 MOSTRAR EL MODAL DE BOOTSTRAP EN LUGAR DE SWEETALERT
+            successModal.show();
         })
         .catch(error => {
             console.error('Error al crear cuestionario:', error);
-            errorMessage.textContent = 'Ocurrió un error. Asegúrate de que todas las preguntas y opciones tengan texto.';
+            errorMessage.textContent = error.detail || 'Ocurrió un error al crear el cuestionario.';
             errorMessage.classList.remove('d-none');
         });
+    });
+
+    // Añadir listener para el botón de confirmar del modal para redirigir
+    document.getElementById('success-modal-confirm-btn').addEventListener('click', () => {
+        window.location.href = '/dashboard/';
     });
 });
 </script>

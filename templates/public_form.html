@@ -3,145 +3,429 @@
 {% block title %}Contestar Cuestionario{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<style>
+    /* Paleta de colores y estilos base */
+    :root {
+        --main-bg-light: #F8FAFD;
+        --panel-right-bg: #F4F7FB;
+        --oracle-red-accent: #A83C3C;
+        --oracle-red-hover: #8B2F2F;
+        --text-dark-blue-grey: #333F4F;
+        --text-medium-grey: #6C7A89;
+        --border-light-grey: #DDE2E7;
+        --neutral-white: #FFFFFF;
+        --success-text: #66BB6A;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--main-bg-light);
+    }
+
+    /* --- Contenedor Principal --- */
+    .survey-main-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 30px;
+        background-color: var(--neutral-white);
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .survey-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border-light-grey);
+    }
+    
+    .survey-header h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        color: var(--text-dark-blue-grey);
+        font-size: 2em;
+    }
+
+    /* --- Tarjetas Personalizadas --- */
+    .survey-card {
+        background-color: var(--panel-right-bg);
+        border: 1px solid var(--border-light-grey);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        overflow: hidden; /* Para que el header se ajuste bien */
+    }
+
+    .survey-card .card-header {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        color: var(--text-dark-blue-grey);
+        background-color: #E9EDF3; /* Un poco más oscuro para destacar */
+        padding: 12px 20px;
+        font-size: 1.1em;
+    }
+
+    .survey-card .card-body {
+        padding: 25px;
+    }
+
+    /* --- Estilos del Formulario de Preguntas --- */
+    #public-questionnaire-form p.fw-bold {
+        font-size: 1rem;
+        color: var(--text-dark-blue-grey);
+        font-weight: 600 !important;
+        margin-bottom: 12px;
+    }
+
+    #public-questionnaire-form .form-check-label {
+        color: var(--text-medium-grey);
+        font-size: 0.9rem;
+    }
+
+    #public-questionnaire-form .form-check-input {
+        border-color: var(--border-light-grey);
+    }
+    
+    #public-questionnaire-form .form-check-input:checked {
+        background-color: var(--oracle-red-accent);
+        border-color: var(--oracle-red-accent);
+    }
+
+    /* --- Botón Personalizado --- */
+    .btn-primary-custom {
+        background-color: var(--oracle-red-accent);
+        color: var(--neutral-white);
+        padding: 10px 25px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 12px rgba(168, 60, 60, 0.25);
+    }
+
+    .btn-primary-custom:hover {
+        background-color: var(--oracle-red-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(139, 47, 47, 0.35);
+    }
+
+    /* --- Contenedor de Gráficas --- */
+    #charts-container p.fw-bold {
+        color: var(--text-dark-blue-grey);
+        font-weight: 600 !important;
+    }
+
+    /* --- Página de Agradecimiento --- */
+    .thank-you-container {
+        padding: 50px 20px;
+        text-align: center;
+    }
+
+    .thank-you-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 25px auto;
+        color: var(--success-text);
+    }
+
+    .thank-you-container h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        color: var(--text-dark-blue-grey);
+        font-size: 2.2em;
+    }
+
+    .thank-you-container p {
+        color: var(--text-medium-grey);
+        font-size: 1.1em;
+        margin-bottom: 30px;
+    }
+
+    .btn-secondary-custom {
+        background-color: var(--main-bg-light);
+        color: var(--text-medium-grey);
+        padding: 10px 25px;
+        border: 1px solid var(--border-light-grey);
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .btn-secondary-custom:hover {
+        background-color: var(--border-light-grey);
+        color: var(--text-dark-blue-grey);
+    }
+</style>
+
+<div class="survey-main-container">
     <div id="survey-content">
-        <h2 id="questionnaire-title" class="text-center mb-4">Cargando...</h2>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header fw-bold">Preguntas</div>
+        <div class="survey-header">
+            <h2 id="questionnaire-title">Cargando...</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="survey-card">
+                    <div class="card-header">Preguntas</div>
                     <div class="card-body">
                         <form id="public-questionnaire-form">
                             </form>
-                        <button id="finish-btn" class="btn btn-success w-100 mt-4 d-none">Finalizar Encuesta</button>
+                        <button id="finish-btn" class="btn-primary-custom w-100 mt-4 d-none">Finalizar Encuesta</button>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header fw-bold">Resultados en Vivo</div>
+            <div class="col-lg-6">
+                <div class="survey-card">
+                    <div class="card-header">Resultados en Vivo</div>
                     <div class="card-body" id="charts-container">
                         </div>
                 </div>
             </div>
         </div>
     </div>
-    <div id="thank-you-message" class="card d-none">
-        <div class="card-body text-center">
-            <h2 class="card-title">¡Gracias por tus respuestas!</h2>
-            <p>Tu participación ha sido registrada.</p>
-            <a href="/" class="btn btn-secondary">Volver al inicio</a>
+    
+    <div id="thank-you-message" class="d-none">
+        <div class="thank-you-container">
+            <div class="thank-you-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                </svg>
+            </div>
+            <h2>¡Gracias por tus respuestas!</h2>
+            <p>Tu participación ha sido registrada con éxito.</p>
+            <a href="/" class="btn-secondary-custom">Volver al inicio</a>
         </div>
     </div>
 </div>
 
-
 <script>
+// ==========================================================
+// TODA LA LÓGICA DE JAVASCRIPT PERMANECE SIN CAMBIOS
+// ==========================================================
+console.log("DEBUG PUBLIC_FORM: Script de public_form.html cargando.");
+
 document.addEventListener('DOMContentLoaded', function() {
-    const accessCode = '{{ access_code }}';
-    const titleEl = document.getElementById('questionnaire-title');
-    const formContainer = document.getElementById('public-questionnaire-form');
-    const chartsContainer = document.getElementById('charts-container');
-    const finishBtn = document.getElementById('finish-btn');
+    console.log("DEBUG PUBLIC_FORM: DOMContentLoaded disparado.");
     
-    let chartInstances = {};
+    try {
+        const accessCode = '{{ access_code }}';
+        const titleEl = document.getElementById('questionnaire-title');
+        const formContainer = document.getElementById('public-questionnaire-form');
+        const chartsContainer = document.getElementById('charts-container');
+        const finishBtn = document.getElementById('finish-btn');
+        
+        let chartInstances = {};
+        let questionnaireData = null; // Declarado aquí para que todas las funciones lo vean
+        let pendingWebSocketMessages = []; // Para guardar mensajes del WS antes de que questionnaireData esté listo
 
-    function createQuestionUI(question) { /* ... (sin cambios) ... */ }
-    function createChartUI(question) { /* ... (sin cambios) ... */ }
-    function initializeOrUpdateChart(question, stats) { /* ... (sin cambios) ... */ }
-    // (Incluyo las funciones completas al final para que solo copies y pegues una vez)
+        console.log("DEBUG PUBLIC_FORM: Variables JS inicializadas.");
+        console.log("DEBUG PUBLIC_FORM: accessCode =", accessCode);
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/survey/${accessCode}/`);
-
-    socket.onmessage = function(e) { /* ... (sin cambios) ... */ };
-
-    // Lógica de Votación (MODIFICADA)
-    formContainer.addEventListener('change', function(event) {
-        if (event.target.classList.contains('option-input')) {
-            const optionId = event.target.value;
-            const questionId = event.target.name.split('-')[1];
-
-            socket.send(JSON.stringify({
-                question_id: parseInt(questionId),
-                option_id: parseInt(optionId)
-            }));
-
-            // YA NO DESHABILITAMOS LAS OPCIONES. Esto permite cambiar la respuesta.
-        }
-    });
-
-    // Lógica para el botón de Finalizar
-    finishBtn.addEventListener('click', function() {
-        socket.close();
-        document.getElementById('survey-content').classList.add('d-none');
-        document.getElementById('thank-you-message').classList.remove('d-none');
-    });
-
-    let questionnaireData = null;
-    fetch(`/api/questionnaires/public/forms/${accessCode}/`)
-        .then(res => {
-            // Este bloque se mejora en el punto 4
-            if (!res.ok) { throw new Error('Código no válido o encuesta inactiva.'); }
-            return res.json();
-        })
-        .then(data => {
-            questionnaireData = data;
-            titleEl.textContent = data.title;
-            data.questions.forEach(question => {
-                createQuestionUI(question);
-                createChartUI(question);
+        // --- Definiciones completas de las funciones de UI ---
+        function createQuestionUI(question) {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'mb-4';
+            questionDiv.id = `question-block-${question.id}`;
+            let optionsHtml = '';
+            question.options.forEach(option => {
+                optionsHtml += `<div class="form-check"><input class="form-check-input option-input" type="radio" name="question-${question.id}" value="${option.id}"><label class="form-check-label">${option.text}</label></div>`;
             });
-            finishBtn.classList.remove('d-none'); // Mostramos el botón de finalizar
-        })
-        .catch(error => {
-            // Este bloque se mejora en el punto 4
-            titleEl.textContent = 'Error';
-            chartsContainer.innerHTML = `<p class="text-danger text-center">${error.message}</p>`;
-        });
-
-    // --- Definiciones completas de las funciones de UI (sin cambios) ---
-    function createQuestionUI(question) {
-        const questionDiv = document.createElement('div');
-        questionDiv.className = 'mb-4';
-        questionDiv.id = `question-block-${question.id}`;
-        let optionsHtml = '';
-        question.options.forEach(option => {
-            optionsHtml += `<div class="form-check"><input class="form-check-input option-input" type="radio" name="question-${question.id}" value="${option.id}"><label class="form-check-label">${option.text}</label></div>`;
-        });
-        questionDiv.innerHTML = `<p class="fw-bold">${question.text}</p>${optionsHtml}`;
-        formContainer.appendChild(questionDiv);
-    }
-    function createChartUI(question) {
-        const chartDiv = document.createElement('div');
-        chartDiv.className = 'mb-4';
-        chartDiv.innerHTML = `<p class="fw-bold small">${question.text}</p><canvas id="chart-${question.id}"></canvas>`;
-        chartsContainer.appendChild(chartDiv);
-    }
-    function initializeOrUpdateChart(question, stats) {
-        const ctx = document.getElementById(`chart-${question.id}`).getContext('2d');
-        const labels = question.options.map(opt => opt.text);
-        const data = question.options.map(opt => stats[opt.id] || 0);
-        if (chartInstances[question.id]) {
-            chartInstances[question.id].data.datasets[0].data = data;
-            chartInstances[question.id].update();
-        } else {
-            chartInstances[question.id] = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Votos', data: data, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] }, options: { indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
+            questionDiv.innerHTML = `<p class="fw-bold">${question.text}</p>${optionsHtml}`;
+            formContainer.appendChild(questionDiv);
         }
-    }
-    socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        if (data.type === 'initial_stats') {
-            for (const qId in data.stats) {
-                const question = questionnaireData.questions.find(q => q.id == qId);
-                initializeOrUpdateChart(question, data.stats[qId]);
+
+        function createChartUI(question) {
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'mb-4';
+            chartDiv.id = `chart-container-${question.id}`; 
+            chartDiv.innerHTML = `<p class="fw-bold small">${question.text}</p><canvas id="chart-${question.id}"></canvas>`;
+            chartsContainer.appendChild(chartDiv);
+        }
+
+        function initializeOrUpdateChart(question, stats) {
+            if (typeof Chart === 'undefined') {
+                console.error("DEBUG PUBLIC_FORM: Chart.js no está cargado.");
+                return;
+            }
+            
+            const ctx = document.getElementById(`chart-${question.id}`);
+            if (!ctx) {
+                console.error(`DEBUG PUBLIC_FORM: Canvas para chart-${question.id} no encontrado.`);
+                return;
+            }
+            const ctx2d = ctx.getContext('2d');
+
+            const labels = question.options.map(opt => opt.text);
+            const data = question.options.map(opt => stats[opt.id] || 0);
+            
+            if (chartInstances[question.id]) {
+                chartInstances[question.id].data.datasets[0].data = data;
+                chartInstances[question.id].update();
+                console.log(`DEBUG PUBLIC_FORM: Gráfica para pregunta ${question.id} actualizada.`);
+            } else {
+                chartInstances[question.id] = new Chart(ctx2d, { 
+                    type: 'bar', 
+                    data: { 
+                        labels: labels, 
+                        datasets: [{ 
+                            label: 'Votos', 
+                            data: data, 
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)' 
+                        }] 
+                    }, 
+                    options: { 
+                        indexAxis: 'y', 
+                        scales: { 
+                            x: { beginAtZero: true, ticks: { stepSize: 1 } } 
+                        }, 
+                        plugins: { 
+                            legend: { display: false } 
+                        } 
+                    } 
+                });
+                console.log(`DEBUG PUBLIC_FORM: Gráfica para pregunta ${question.id} inicializada.`);
             }
         }
-        if (data.type === 'stats_update') {
-            const question = questionnaireData.questions.find(q => q.id == data.question_id);
-            initializeOrUpdateChart(question, data.stats);
+        // --- FIN Definiciones completas de las funciones de UI ---
+
+
+        console.log("DEBUG PUBLIC_FORM: Inicializando WebSocket.");
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/survey/${accessCode}/`);
+        
+        // Manejadores de eventos del WebSocket
+        socket.onopen = function(event) {
+            console.log("DEBUG PUBLIC_FORM: WebSocket abierto con éxito.", event);
+            // Cuando el socket se abre Y questionnaireData está listo,
+            // procesamos los mensajes pendientes y luego solicitamos las stats iniciales.
+            if (questionnaireData) {
+                console.log("DEBUG PUBLIC_FORM: WebSocket abierto y questionnaireData listo. Procesando mensajes pendientes...");
+                while(pendingWebSocketMessages.length > 0) {
+                    const msg = pendingWebSocketMessages.shift();
+                    processWebSocketMessage(msg);
+                }
+                // También podemos pedir las stats iniciales si el Consumer no las envía automáticamente al conectar
+                // socket.send(JSON.stringify({ type: 'request_initial_stats' }));
+            } else {
+                console.log("DEBUG PUBLIC_FORM: WebSocket abierto, pero questionnaireData NO listo. Los mensajes se procesarán al cargarse los datos.");
+            }
+        };
+
+        function processWebSocketMessage(e) {
+            const data = JSON.parse(e.data);
+            // Solo procesamos si questionnaireData está listo
+            if (!questionnaireData) {
+                console.warn("DEBUG PUBLIC_FORM: Mensaje WebSocket recibido antes que questionnaireData. En cola.");
+                pendingWebSocketMessages.push(e); // Poner en cola para procesar después
+                return;
+            }
+
+            if (data.type === 'initial_stats') {
+                console.log("DEBUG PUBLIC_FORM: Mensaje 'initial_stats' recibido y procesando.");
+                for (const qId in data.stats) {
+                    const question = questionnaireData.questions.find(q => q.id == qId);
+                    if (question) { 
+                        initializeOrUpdateChart(question, data.stats[qId]);
+                    }
+                }
+                console.log("DEBUG PUBLIC_FORM: Estadísticas iniciales procesadas.");
+            } else if (data.type === 'stats_update') {
+                console.log("DEBUG PUBLIC_FORM: Mensaje 'stats_update' recibido y procesando.");
+                const question = questionnaireData.questions.find(q => q.id == data.question_id);
+                if (question) {
+                    initializeOrUpdateChart(question, data.stats);
+                    console.log(`DEBUG PUBLIC_FORM: Actualización de estadística para pregunta ${question.id} procesada.`);
+                }
+            } else {
+                console.log("DEBUG PUBLIC_FORM: Tipo de mensaje WebSocket desconocido:", data.type);
+            }
         }
-    };
-});
+        socket.onmessage = processWebSocketMessage; // Asignamos la función que procesa mensajes
+
+
+        socket.onerror = function(error) {
+            console.error("DEBUG PUBLIC_FORM: Error de WebSocket:", error);
+            chartsContainer.innerHTML = `<p class="text-danger text-center">Error de conexión a resultados en vivo.</p>`;
+        };
+
+        socket.onclose = function(event) {
+            console.warn("DEBUG PUBLIC_FORM: WebSocket cerrado:", event.code, event.reason);
+            if (event.code !== 1000) { 
+                 chartsContainer.innerHTML = `<p class="text-danger text-center">Conexión de resultados en vivo perdida.</p>`;
+            }
+        };
+
+
+        // Lógica de Votación
+        formContainer.addEventListener('change', function(event) {
+            if (event.target.classList.contains('option-input')) {
+                const optionId = event.target.value;
+                const questionId = event.target.name.split('-')[1];
+
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        question_id: parseInt(questionId),
+                        option_id: parseInt(optionId)
+                    }));
+                    console.log(`DEBUG PUBLIC_FORM: Mensaje enviado por WebSocket: P${questionId} O${optionId}`);
+                } else {
+                    console.warn("DEBUG PUBLIC_FORM: Intentando enviar mensaje, pero WebSocket NO está abierto. Estado:", socket.readyState);
+                }
+            }
+        });
+
+        // Lógica para el botón de Finalizar
+        finishBtn.addEventListener('click', function() {
+            if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                socket.close(1000, 'Encuesta finalizada por el usuario.');
+                console.log("DEBUG PUBLIC_FORM: WebSocket cerrado por usuario.");
+            }
+            document.getElementById('survey-content').classList.add('d-none');
+            document.getElementById('thank-you-message').classList.remove('d-none');
+        });
+
+        // Carga inicial de datos del cuestionario
+        console.log("DEBUG PUBLIC_FORM: Iniciando fetch de datos del cuestionario.");
+        fetch(`/api/questionnaires/public/forms/${accessCode}/`)
+            .then(res => {
+                console.log("DEBUG PUBLIC_FORM: Fetch de datos del cuestionario - Respuesta recibida.", res.status);
+                if (!res.ok) { 
+                    if (res.status === 404) {
+                        throw new Error('Cuestionario no encontrado o código inválido.');
+                    } else {
+                        throw new Error('Error al cargar la encuesta. Por favor, intente de nuevo.');
+                    }
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log("DEBUG PUBLIC_FORM: Datos del cuestionario cargados exitosamente.", data);
+                questionnaireData = data; // ¡Asigna los datos a la variable aquí!
+                titleEl.textContent = data.title;
+                formContainer.innerHTML = ''; 
+                data.questions.forEach(question => {
+                    createQuestionUI(question);
+                    createChartUI(question);
+                });
+                finishBtn.classList.remove('d-none'); 
+                
+                // Procesar mensajes WebSocket que llegaron antes de que questionnaireData estuviera listo
+                console.log("DEBUG PUBLIC_FORM: questionnaireData listo. Procesando mensajes WS pendientes...");
+                while(pendingWebSocketMessages.length > 0) {
+                    const msg = pendingWebSocketMessages.shift();
+                    processWebSocketMessage(msg); // Llama a la función de procesamiento
+                }
+            })
+            .catch(error => {
+                console.error("DEBUG PUBLIC_FORM: Error en la carga inicial de datos del cuestionario:", error);
+                titleEl.textContent = 'Error al cargar cuestionario';
+                chartsContainer.innerHTML = `<p class="text-danger text-center">Error: ${error.message}</p>`;
+            });
+
+    } catch (e) {
+        console.error("DEBUG PUBLIC_FORM: ERROR CRÍTICO EN LA INICIALIZACIÓN DEL SCRIPT (fuera de DOMContentLoaded?):", e);
+        alert("¡Error crítico al cargar la encuesta! Por favor, revisa la consola para más detalles.");
+    }
+}); // Fin DOMContentLoaded
 </script>
 {% endblock %}

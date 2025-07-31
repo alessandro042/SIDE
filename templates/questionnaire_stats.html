@@ -3,13 +3,124 @@
 {% block title %}Estadísticas{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 id="questionnaire-title">Cargando estadísticas...</h2>
-    <a href="{% url 'dashboard-page' %}" class="btn btn-secondary">Volver al Panel</a>
-</div>
+<style>
+    /* Asegúrate de que las fuentes Poppins y Roboto estén importadas en base.html o aquí si es necesario */
+    /* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'); */
+    /* @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap'); */
 
-<div id="stats-container">
-    <p>Cargando gráficas...</p>
+    body {
+        font-family: 'Poppins', sans-serif; /* Consistente con el diseño */
+        background-color: #f0f2f5; /* Fondo gris claro consistente */
+    }
+
+    /* Contenedor principal de la página */
+    .stats-main-container {
+        padding: 30px 20px;
+        max-width: 1000px; /* Ancho ajustable para las gráficas */
+        margin: 20px auto;
+        background-color: #ffffff;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .stats-header h2 {
+        font-size: 1.8em; /* Tamaño de fuente del título principal */
+        color: #333;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Botón "Volver al Panel" */
+    .btn-secondary-custom {
+        background-color: #f8f9fa; /* Fondo claro para cancelar/volver */
+        color: #6c757d; /* Texto gris */
+        padding: 8px 18px; /* Padding para que sean más pequeños */
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 0.95em; /* Tamaño de fuente más pequeño */
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        font-weight: 500;
+        text-decoration: none;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Sombra sutil */
+    }
+    .btn-secondary-custom:hover {
+        background-color: #e9ecef;
+        color: #495057;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Contenedor de las gráficas */
+    #charts-container { /* Cambié el ID a charts-container para ser más específico */
+        margin-top: 20px;
+    }
+
+    /* Estilo de la tarjeta para cada pregunta/gráfica */
+    .chart-card {
+        background-color: #fcfcfc; /* Un blanco muy ligero para las tarjetas internas */
+        border-radius: 12px; /* Bordes redondeados */
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
+        border: 1px solid #e0e0e0; /* Borde suave */
+        padding: 20px; /* Padding interno */
+        margin-bottom: 30px; /* Espacio entre gráficas */
+        position: relative;
+        z-index: 1;
+    }
+
+    .chart-card .card-header {
+        background-color: transparent; /* Fondo transparente para el header */
+        border-bottom: 1px solid #f0f0f0; /* Borde sutil */
+        padding: 0 0 15px 0; /* Padding inferior para separar del cuerpo */
+        margin-bottom: 15px; /* Margen para el espacio */
+        font-size: 1.1em; /* Tamaño de fuente de la pregunta */
+        color: #333;
+        font-weight: 600;
+    }
+
+    .chart-card .card-body {
+        padding: 0; /* Eliminar padding de Bootstrap card-body */
+        height: 300px; /* Altura fija para el canvas, puedes ajustar esto */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    canvas {
+        max-width: 100%;
+        max-height: 100%;
+    }
+    
+    /* Colores personalizados para las barras de la gráfica */
+    /* Estas clases son para ser usadas en el JS de Chart.js */
+    .chart-color-oracle-blue { background-color: #007ACC; border-color: #007ACC; }
+    .chart-color-oracle-red { background-color: #E60000; border-color: #E60000; }
+    .chart-color-accent-blue { background-color: #5bc0de; border-color: #5bc0de; } /* Un azul más claro */
+    .chart-color-grey { background-color: #6c757d; border-color: #6c757d; }
+
+    /* Estilos para los gradientes en las barras (opcional, si quieres un efecto 3D en Chart.js) */
+    /* Chart.js necesita que le pases el gradiente creado en JS, no directamente en CSS */
+
+</style>
+
+<div class="stats-main-container">
+    <div class="stats-header">
+        <h2 id="questionnaire-title">Cargando estadísticas...</h2>
+        <a href="{% url 'dashboard-page' %}" class="btn-secondary-custom">Volver al Panel</a>
+    </div>
+
+    <div id="charts-container">
+        <p class="text-center text-muted">Cargando gráficas...</p>
+    </div>
 </div>
 
 <script>
@@ -17,13 +128,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionnaireId = {{ questionnaire_id }};
     const token = localStorage.getItem('authToken');
     const titleEl = document.getElementById('questionnaire-title');
-    const container = document.getElementById('stats-container');
-    let charts = {};
+    const container = document.getElementById('charts-container'); // Cambiado a charts-container
+    let charts = {}; // Para almacenar las instancias de Chart.js
 
     // Proteger la página: si no hay token, redirigir al login.
     if (!token) {
         window.location.href = '/login/';
         return;
+    }
+
+    // Definición de colores para las gráficas (usando la paleta de Oracle)
+    const chartColors = [
+        '#007ACC', // Azul de Oracle
+        '#E60000', // Rojo de Oracle
+        '#17a2b8', // Azul turquesa (para acento)
+        '#28a745', // Verde (para éxito/opciones extra)
+        '#ffc107', // Amarillo (para advertencia/opciones extra)
+        '#6c757d'  // Gris (para opciones extra)
+    ];
+
+    // Función para crear gradientes dinámicamente para las barras
+    function createGradient(ctx, chartArea, colorStart, colorEnd) {
+        if (!ctx || !chartArea) return;
+        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+        gradient.addColorStop(0, colorEnd);
+        gradient.addColorStop(1, colorStart);
+        return gradient;
     }
 
     function fetchStats() {
@@ -32,71 +162,192 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: { 'Authorization': `Token ${token}` }
         })
         .then(response => {
-            if (!response.ok) { throw new Error('Token inválido o cuestionario no encontrado.'); }
+            if (!response.ok) { 
+                // Si el token es inválido o el cuestionario no se encuentra, redirigir
+                if (response.status === 401 || response.status === 404) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login/';
+                }
+                throw new Error('Cuestionario no encontrado o acceso denegado.');
+            }
             return response.json();
         })
         .then(data => {
             titleEl.textContent = `Estadísticas de: ${data.title}`;
         })
         .catch(error => {
-            console.error("Error obteniendo el título:", error);
-            localStorage.removeItem('authToken');
-            window.location.href = '/login/';
+            console.error("Error obteniendo el título del cuestionario:", error);
+            // Ya manejado el redireccionamiento arriba si es 401/404
+            titleEl.textContent = `Error al cargar el título de las estadísticas.`;
         });
 
         // Obtenemos los datos de las estadísticas
         fetch(`/api/questionnaires/${questionnaireId}/stats/`, {
             headers: { 'Authorization': `Token ${token}` }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                 // Si el token es inválido o la URL de stats no se encuentra
+                if (response.status === 401 || response.status === 404) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login/';
+                }
+                throw new Error('No se pudieron cargar las estadísticas.');
+            }
+            return response.json();
+        })
         .then(data => {
-            for (const qId in data) {
-                const questionData = data[qId];
-                const chartInstance = charts[qId];
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">Aún no hay respuestas para este cuestionario.</p>';
+                return;
+            }
 
-                if (chartInstance) {
-                    chartInstance.data.labels = questionData.options.map(opt => opt.option_text);
-                    chartInstance.data.datasets[0].data = questionData.options.map(opt => opt.votes);
-                    chartInstance.update();
-                } 
-                else {
-                    if (Object.keys(charts).length === 0) { container.innerHTML = ''; }
-                    
-                    const card = document.createElement('div');
-                    card.className = 'card mb-4';
-                    card.innerHTML = `<div class="card-header fw-bold">${questionData.question_text}</div>`;
-                    
-                    const canvasContainer = document.createElement('div');
-                    canvasContainer.className = 'card-body';
-                    const canvas = document.createElement('canvas');
-                    canvasContainer.appendChild(canvas);
-                    card.appendChild(canvasContainer);
-                    container.appendChild(card);
-
-                    charts[qId] = new Chart(canvas, {
-                        type: 'bar',
-                        data: {
-                            labels: questionData.options.map(opt => opt.option_text),
-                            datasets: [{
-                                label: 'Votos',
-                                data: questionData.options.map(opt => opt.votes),
-                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                                borderColor: 'rgba(54, 162, 235, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: { 
-                            indexAxis: 'y',
-                            scales: { x: { beginAtZero: true } }
-                        }
-                    });
+            // Destruir gráficos existentes antes de volver a dibujar
+            for (const qId in charts) {
+                if (charts[qId]) {
+                    charts[qId].destroy();
                 }
             }
+            charts = {}; // Reiniciar el objeto de gráficos
+
+            container.innerHTML = ''; // Limpiar "cargando..." solo si hay datos
+
+            let colorIndex = 0; // Para rotar a través de los colores
+
+            for (const qId in data) {
+                const questionData = data[qId];
+                
+                const card = document.createElement('div');
+                card.className = 'chart-card mb-4'; // Usar la clase de tarjeta personalizada
+                
+                const cardHeader = document.createElement('div');
+                cardHeader.className = 'card-header';
+                cardHeader.textContent = questionData.question_text;
+                card.appendChild(cardHeader);
+
+                const canvasContainer = document.createElement('div');
+                canvasContainer.className = 'card-body';
+                const canvas = document.createElement('canvas');
+                canvasContainer.appendChild(canvas);
+                card.appendChild(canvasContainer);
+                container.appendChild(card);
+
+                // Preparar los colores de las barras con gradiente
+                const barBackgroundColors = questionData.options.map((opt, index) => {
+                    const ctx = canvas.getContext('2d');
+                    const chartArea = { bottom: 0, top: 0 }; // Se definirá correctamente cuando Chart.js dibuje
+                    
+                    // Rotar a través de los colores base definidos
+                    const currentColor = chartColors[(colorIndex + index) % chartColors.length];
+                    const darkerColor = darkenColor(currentColor, 20); // Función para oscurecer el color para el gradiente
+
+                    // Retorna una función para que Chart.js la llame en el momento de dibujar
+                    return function(context) {
+                        const chart = context.chart;
+                        const { chartArea } = chart;
+
+                        if (!chartArea) { return null; } // Asegura que chartArea esté definido
+
+                        return createGradient(context.chart.ctx, chartArea, currentColor, darkerColor);
+                    };
+                });
+                
+                colorIndex = (colorIndex + questionData.options.length) % chartColors.length; // Avanza el índice para la siguiente pregunta
+
+                charts[qId] = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: questionData.options.map(opt => opt.option_text),
+                        datasets: [{
+                            label: 'Votos',
+                            data: questionData.options.map(opt => opt.votes),
+                            backgroundColor: barBackgroundColors, // Asignamos los gradientes/colores
+                            borderColor: 'transparent', // Barras sin borde visible
+                            borderWidth: 0,
+                            borderRadius: 6, // Bordes redondeados para las barras
+                            barThickness: 'flex', // Ajuste flexible del grosor de la barra
+                            maxBarThickness: 30 // Grosor máximo para las barras
+                        }]
+                    },
+                    options: { 
+                        responsive: true,
+                        maintainAspectRatio: false, // Permitir que la altura fija del card-body controle el tamaño
+                        indexAxis: 'y', // Gráfico de barras horizontal
+                        animation: {
+                            duration: 1000, // Duración de la animación de carga
+                            easing: 'easeOutQuart' // Tipo de easing
+                        },
+                        scales: { 
+                            x: { 
+                                beginAtZero: true,
+                                ticks: {
+                                    font: { family: 'Roboto', size: 12 }, // Fuente para los números del eje X
+                                    color: '#777' // Color de los números
+                                },
+                                grid: {
+                                    display: false, // Ocultar líneas de la cuadrícula X
+                                    drawBorder: false // Ocultar borde del eje X
+                                }
+                            },
+                            y: { 
+                                ticks: {
+                                    font: { family: 'Poppins', size: 13, weight: 'bold' }, // Fuente para las etiquetas del eje Y
+                                    color: '#555' // Color de las etiquetas
+                                },
+                                grid: {
+                                    display: false, // Ocultar líneas de la cuadrícula Y
+                                    drawBorder: false // Ocultar borde del eje Y
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false // Ocultar la leyenda "Votos"
+                            },
+                            tooltip: {
+                                enabled: true, // Habilitar tooltips
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)', // Fondo oscuro
+                                titleFont: { family: 'Poppins', size: 14, weight: 'bold' },
+                                bodyFont: { family: 'Roboto', size: 13 },
+                                padding: 10,
+                                displayColors: false, // Ocultar el cuadrito de color en el tooltip
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) { label += ': '; }
+                                        label += new Intl.NumberFormat('es-MX').format(context.raw); // Formato de número
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Error al cargar las estadísticas:", error);
+            container.innerHTML = '<p class="text-center text-danger">Error al cargar las estadísticas. Verifica tu conexión o los permisos.</p>';
         });
     }
 
-    fetchStats();
-    setInterval(fetchStats, 5000);
+    // Función para oscurecer un color (para gradientes)
+    function darkenColor(hex, percent) {
+        var f = parseInt(hex.slice(1), 16),
+            t = percent < 0 ? 0 : 255,
+            p = percent < 0 ? percent * -1 : percent,
+            R = f >> 16,
+            G = (f >> 8) & 0x00ff,
+            B = f & 0x0000ff;
+        return "#" + (0x1000000 + (Math.round((t - R) * p) + R) * 0x10000 + (Math.round((t - G) * p) + G) * 0x100 + (Math.round((t - B) * p) + B))
+            .toString(16)
+            .slice(1);
+    }
+
+
+    fetchStats(); // Llamar al inicio
+    setInterval(fetchStats, 5000); // Actualizar cada 5 segundos
 });
+
 </script>
 {% endblock %}

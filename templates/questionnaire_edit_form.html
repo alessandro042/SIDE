@@ -3,35 +3,515 @@
 {% block title %}Editar Cuestionario{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Editar Cuestionario</h2>
-    <a href="{% url 'dashboard-page' %}" class="btn btn-secondary">Cancelar</a>
-</div>
+<style>
+    /* Paleta de colores: Neutra con acentos inspirados en Oracle Red (copiada de base.html) */
+    :root {
+        --main-bg-light: #F8FAFD; /* Fondo general muy claro */
+        --panel-right-bg: #F4F7FB; /* Usado para fondos de secciones o tarjetas claras */
+        --oracle-red-accent: #A83C3C; /* Rojo sofisticado y desaturado (tu acento principal) */
+        --oracle-red-hover: #8B2F2F; /* Versión más oscura para hover */
+        --oracle-red-alert: #D65A5A; /* Rojo estándar para alertas de error */
 
-<form id="edit-questionnaire-form">
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="mb-3">
-                <label for="questionnaire-title" class="form-label fw-bold">Título del Cuestionario</label>
-                <input type="text" class="form-control" id="questionnaire-title" required>
+        --text-dark-blue-grey: #333F4F; /* Azul grisáceo oscuro para texto principal y títulos */
+        --text-medium-grey: #6C7A89; /* Gris medio para texto secundario/párrafos */
+        
+        --border-light-grey: #DDE2E7; /* Borde muy claro */
+        --input-focus-border: #9BB8D3; /* Borde de input en foco (azul suave para no saturar con rojo) */
+
+        --neutral-white: #FFFFFF; /* Blanco puro */
+        --error-bg-light: #FCEDED; /* Fondo de error muy pálido */
+        --warning-bg-light: #FFFBF0; /* Fondo de advertencia muy pálido */
+        --success-bg-light: #E9FBF3; /* Fondo de éxito muy pálido */
+        --warning-text: #EBC65D; /* Amarillo cálido para advertencias */
+        --success-text: #66BB6A; /* Verde suave para acciones de éxito */
+
+        /* Variables RGB para usar en rgba(), si no están en base.html */
+        --text-dark-blue-grey-rgb: 51, 63, 79;
+        --text-medium-grey-rgb: 108, 122, 137;
+        --oracle-red-accent-rgb: 168, 60, 60;
+        --oracle-red-hover-rgb: 139, 47, 47;
+        --oracle-red-alert-rgb: 214, 90, 90;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--main-bg-light); /* Fondo consistente con la paleta */
+    }
+
+    /* Contenedor principal del formulario */
+    .form-main-container {
+        padding: 35px 25px; /* Consistente con Crear Cuestionario */
+        max-width: 900px;
+        margin: 20px auto;
+        background-color: var(--neutral-white);
+        border-radius: 15px; /* Consistente */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); /* Consistente */
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Degradado de fondo sutil (ahora consistente con la paleta) */
+    .form-main-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(var(--text-dark-blue-grey-rgb), 0.05), rgba(var(--text-medium-grey-rgb), 0.02));
+        opacity: 0.7;
+        border-radius: 15px;
+        z-index: 0;
+    }
+
+    .form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px; /* Consistente */
+        padding-bottom: 15px; /* Consistente */
+        border-bottom: 1px solid var(--border-light-grey); /* Consistente */
+        position: relative;
+        z-index: 1;
+    }
+
+    .form-header h2 {
+        font-family: 'Montserrat', sans-serif; /* Consistente con otros títulos */
+        font-size: 1.6em; /* Consistente */
+        color: var(--text-dark-blue-grey);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    /* Botones de acción general (Cancelar) */
+    .btn-secondary-custom {
+        background-color: var(--main-bg-light); /* Fondo claro de la paleta */
+        color: var(--text-medium-grey);
+        padding: 7px 16px; /* Consistente */
+        border: 1px solid var(--border-light-grey); /* Borde suave */
+        border-radius: 8px; /* Consistente */
+        font-size: 0.85em; /* Consistente */
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        font-weight: 500;
+        text-decoration: none;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        position: relative; /* Asegurar que esté sobre el pseudo-elemento */
+        z-index: 1;
+    }
+    .btn-secondary-custom:hover {
+        background-color: var(--border-light-grey);
+        color: var(--text-dark-blue-grey);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Botón principal de éxito (Guardar Cambios) */
+    .btn-success-custom {
+        background-color: var(--oracle-red-accent); /* Color de acento de Oracle */
+        color: var(--neutral-white);
+        padding: 10px 20px; /* Consistente */
+        border: none;
+        border-radius: 10px; /* Consistente */
+        font-size: 0.95em; /* Consistente */
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        font-weight: 600;
+        width: 100%;
+        max-width: 400px; /* Consistente */
+        margin: 30px auto 0 auto; /* Consistente */
+        display: block;
+        box-shadow: 0 5px 12px rgba(var(--oracle-red-accent-rgb), 0.3);
+        position: relative;
+        z-index: 1;
+    }
+    .btn-success-custom:hover {
+        background-color: var(--oracle-red-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 7px 18px rgba(var(--oracle-red-hover-rgb), 0.4);
+    }
+
+    /* Estilos para campos de formulario */
+    .form-label {
+        font-weight: 600 !important;
+        color: var(--text-dark-blue-grey);
+        font-size: 0.85em; /* Consistente */
+        margin-bottom: 6px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .form-control {
+        border-radius: 8px; /* Consistente */
+        padding: 9px 12px; /* Consistente */
+        border: 1px solid var(--border-light-grey);
+        font-size: 0.9em; /* Consistente */
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        width: 100%;
+        max-width: 700px;
+        box-sizing: border-box;
+        background-color: var(--neutral-white);
+        position: relative;
+        z-index: 1;
+    }
+    .form-control:focus {
+        border-color: var(--input-focus-border);
+        box-shadow: 0 0 0 3px rgba(155, 184, 211, 0.2);
+        outline: none;
+        background-color: var(--neutral-white);
+    }
+
+    /* Tarjetas de preguntas y opciones */
+    .question-card {
+        background-color: var(--panel-right-bg); /* Fondo ligeramente diferente consistente */
+        border-radius: 12px; /* Consistente */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Consistente */
+        border: 1px solid var(--border-light-grey);
+        padding: 25px; /* Consistente */
+        margin-bottom: 25px !important; /* Consistente */
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+    }
+
+    /* Barra de color lateral para preguntas */
+    .question-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 6px;
+        height: 100%;
+        background-color: var(--oracle-red-accent); /* Color de acento de Oracle */
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+    .question-card .card-body {
+        padding-left: 10px;
+    }
+
+    .options-container {
+        padding-left: 0px;
+        margin-top: 15px;
+    }
+
+    .input-group {
+        margin-bottom: 12px !important;
+        position: relative;
+        z-index: 1;
+    }
+    .input-group .input-group-text,
+    .input-group .form-control {
+        height: auto;
+        padding: 7px 10px;
+        font-size: 0.8em; /* Consistente */
+        border-radius: 8px;
+        border: 1px solid var(--border-light-grey);
+    }
+    .input-group .input-group-text {
+        background-color: var(--main-bg-light); /* Consistente */
+        color: var(--text-medium-grey);
+        border-right: none;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .input-group .form-control {
+        border-left: none;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        max-width: 500px;
+        background-color: var(--neutral-white);
+    }
+
+    /* Botones de añadir/eliminar pregunta/opción */
+    .btn-add-question-custom {
+        background-color: transparent;
+        border: 2px solid var(--oracle-red-accent);
+        color: var(--oracle-red-accent);
+        padding: 8px 20px; /* Consistente */
+        border-radius: 10px;
+        font-size: 0.9em; /* Consistente */
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        box-shadow: 0 3px 8px rgba(var(--oracle-red-accent-rgb), 0.15);
+        position: relative;
+        z-index: 1;
+    }
+    .btn-add-question-custom:hover {
+        background-color: var(--oracle-red-accent);
+        color: var(--neutral-white);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 12px rgba(var(--oracle-red-accent-rgb), 0.3);
+    }
+    .btn-add-question-custom svg {
+        width: 16px; /* Consistente */
+        height: 16px;
+        fill: currentColor;
+    }
+
+    .btn-add-option-custom {
+        background-color: transparent;
+        border: 1px solid var(--text-medium-grey);
+        color: var(--text-medium-grey);
+        padding: 5px 10px; /* Consistente */
+        border-radius: 6px;
+        font-size: 0.75em; /* Consistente */
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        position: relative; /* Asegurar que esté sobre el pseudo-elemento */
+        z-index: 1;
+    }
+    .btn-add-option-custom:hover {
+        background-color: var(--text-medium-grey);
+        color: var(--neutral-white);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .btn-add-option-custom svg {
+        width: 12px; /* Consistente */
+        height: 12px;
+        fill: currentColor;
+    }
+
+    /* Botón "Cerrar" para eliminar preguntas (icono de papelera) */
+    .btn-close-custom {
+        background: none;
+        border: none;
+        font-size: 1.1em; /* Consistente */
+        color: var(--text-medium-grey);
+        cursor: pointer;
+        transition: color 0.3s ease, transform 0.2s ease;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative; /* Asegurar que esté sobre el pseudo-elemento */
+        z-index: 1;
+    }
+    .btn-close-custom svg {
+        width: 20px; /* Consistente */
+        height: 20px;
+        fill: currentColor;
+    }
+    .btn-close-custom:hover {
+        color: var(--oracle-red-alert);
+        transform: rotate(10deg);
+    }
+
+    /* Botón de eliminar opción (papelera) */
+    .btn-remove-option-custom {
+        background-color: transparent;
+        border: 1px solid var(--border-light-grey);
+        border-left: none;
+        color: var(--oracle-red-alert);
+        cursor: pointer;
+        width: 30px; /* Consistente */
+        height: 30px; /* Consistente */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+        transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+    .btn-remove-option-custom:hover {
+        background-color: var(--oracle-red-alert);
+        color: var(--neutral-white);
+        box-shadow: 0 2px 6px rgba(var(--oracle-red-alert-rgb), 0.2);
+    }
+    .btn-remove-option-custom svg {
+        width: 14px; /* Consistente */
+        height: 14px;
+        fill: currentColor;
+    }
+
+    /* Mensaje de error */
+    .alert-danger-custom {
+        background-color: var(--error-bg-light);
+        color: var(--oracle-red-alert);
+        border: 1px solid var(--oracle-red-alert);
+        border-radius: 8px;
+        padding: 12px; /* Consistente */
+        margin-bottom: 20px; /* Consistente */
+        font-size: 0.85em; /* Consistente */
+        text-align: center;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        box-shadow: 0 2px 6px rgba(var(--oracle-red-alert-rgb), 0.1);
+        position: relative;
+        z-index: 1;
+    }
+    .d-none {
+        display: none !important;
+    }
+
+    /* Estilos para el texto "Cargando preguntas existentes..." */
+    #questions-container p.text-muted {
+        font-size: 0.9em; /* Ajustado para consistencia */
+        color: var(--text-medium-grey);
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    /* Línea horizontal */
+    hr {
+        border-color: var(--border-light-grey); /* Color de borde consistente */
+        margin: 30px 0; /* Consistente */
+    }
+
+    /* Media queries para responsividad */
+    @media (max-width: 768px) {
+        .form-main-container {
+            padding: 20px 15px;
+            margin: 15px auto;
+            border-radius: 10px;
+        }
+        .form-main-container::before {
+            border-radius: 10px;
+        }
+        .form-header {
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        .form-header h2 {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+        .btn-secondary-custom {
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+        .btn-success-custom {
+            padding: 10px 18px;
+            font-size: 0.9em;
+            margin-top: 25px;
+        }
+        .form-label {
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        .form-control {
+            padding: 8px 10px;
+            font-size: 0.85em;
+        }
+        .question-card {
+            padding: 20px;
+            margin-bottom: 20px !important;
+            border-radius: 10px;
+        }
+        .question-card::before {
+            width: 5px;
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+        .question-card .card-body {
+            padding-left: 8px;
+        }
+        .options-container {
+            margin-top: 15px;
+        }
+        .input-group {
+            margin-bottom: 10px !important;
+        }
+        .input-group .input-group-text,
+        .input-group .form-control {
+            padding: 6px 8px;
+            font-size: 0.75em;
+        }
+        .btn-add-question-custom {
+            padding: 7px 15px;
+            font-size: 0.85em;
+            margin-top: 15px;
+        }
+        .btn-add-question-custom svg {
+            width: 14px;
+            height: 14px;
+        }
+        .btn-add-option-custom {
+            padding: 4px 8px;
+            font-size: 0.7em;
+            margin-top: 8px;
+        }
+        .btn-add-option-custom svg {
+            width: 10px;
+            height: 10px;
+        }
+        .btn-close-custom {
+            font-size: 1em;
+        }
+        .btn-close-custom svg {
+            width: 18px;
+            height: 18px;
+        }
+        .btn-remove-option-custom {
+            width: 28px;
+            height: 28px;
+        }
+        .btn-remove-option-custom svg {
+            width: 12px;
+            height: 12px;
+        }
+        .alert-danger-custom {
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.8em;
+        }
+        #questions-container p.text-muted {
+            font-size: 0.8em;
+        }
+    }
+</style>
+
+<div class="form-main-container">
+    <div class="form-header">
+        <h2>Editar Cuestionario</h2>
+        <a href="{% url 'dashboard-page' %}" class="btn-secondary-custom">Cancelar</a>
+    </div>
+
+    <form id="edit-questionnaire-form">
+        <div class="card mb-4" style="box-shadow: none; border: none; background-color: transparent;">
+            <div class="card-body" style="padding: 0;">
+                <div class="mb-4">
+                    <label for="questionnaire-title" class="form-label">Título del Cuestionario</label>
+                    <input type="text" class="form-control" id="questionnaire-title" required>
+                </div>
             </div>
         </div>
-    </div>
-    
-    <div id="questions-container">
-        <p>Cargando preguntas existentes...</p>
-    </div>
+        
+        <div id="questions-container">
+            <p class="text-center text-muted">Cargando preguntas existentes...</p> </div>
 
-    <button type="button" id="add-question-btn" class="btn btn-outline-primary mb-3">Añadir Pregunta</button>
-    <hr>
-    <div id="error-message" class="alert alert-danger d-none"></div>
-    <button type="submit" class="btn btn-success w-100">Guardar Cambios</button>
-</form>
+        <button type="button" id="add-question-btn" class="btn-add-question-custom">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>
+            Añadir Pregunta
+        </button>
+        
+        <hr style="border-color: var(--border-light-grey); margin: 30px 0;"> <div id="error-message" class="alert-danger-custom d-none"></div>
+        
+        <button type="submit" class="btn-success-custom">Guardar Cambios</button>
+    </form>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('authToken');
-    const questionnaireId = {{ questionnaire_id }};
+    const questionnaireId = {{ questionnaire_id }}; // Asegúrate de que Django pase este ID
     if (!token) {
         window.location.href = '/login/';
         return;
@@ -42,24 +522,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const addQuestionBtn = document.getElementById('add-question-btn');
     const form = document.getElementById('edit-questionnaire-form');
     const errorMessage = document.getElementById('error-message');
-    let questionCounter = 0;
+    let questionCounter = 0; // Para la numeración de preguntas nuevas, si se desea
 
-    // --- Lógica para añadir elementos dinámicamente ---
+    // --- Lógica para añadir elementos dinámicamente con las nuevas clases ---
     function addQuestion(question = { id: null, text: '', options: [] }) {
-        questionCounter++;
+        questionCounter++; // Incrementa para la numeración de la etiqueta
         const questionDiv = document.createElement('div');
-        questionDiv.className = 'card mb-3 question-card';
+        questionDiv.className = 'card mb-3 question-card'; // Clase para la tarjeta de pregunta
         // Guardamos el ID de la pregunta si ya existe
         questionDiv.dataset.questionId = question.id || '';
         questionDiv.innerHTML = `
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <label class="form-label fw-bold">Pregunta</label>
-                    <button type="button" class="btn-close remove-question-btn"></button>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <label class="form-label">Pregunta ${questionCounter}</label> <button type="button" class="btn-close-custom remove-question-btn" title="Eliminar Pregunta">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L245.3 256 342.6 150.6z"/></svg>
+                    </button>
                 </div>
                 <input type="text" class="form-control question-text" value="${question.text}" required>
-                <div class="options-container mt-2 ps-4"></div>
-                <button type="button" class="btn btn-outline-secondary btn-sm mt-2 add-option-btn">Añadir Opción</button>
+                <div class="options-container mt-2"></div>
+                <button type="button" class="btn-add-option-custom add-option-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg>
+                    Añadir Opción
+                </button>
             </div>
         `;
         const optionsContainer = questionDiv.querySelector('.options-container');
@@ -69,13 +553,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function addOption(container, option = { id: null, text: '' }) {
         const optionDiv = document.createElement('div');
-        optionDiv.className = 'input-group input-group-sm mb-2';
+        optionDiv.className = 'input-group mb-2';
         // Guardamos el ID de la opción si ya existe
         optionDiv.dataset.optionId = option.id || '';
         optionDiv.innerHTML = `
             <span class="input-group-text">Opción:</span>
             <input type="text" class="form-control option-text" value="${option.text}" required>
-            <button class="btn btn-outline-danger remove-option-btn" type="button">X</button>
+            <button class="btn-remove-option-custom remove-option-btn" type="button" title="Eliminar Opción">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M135.2 17.7C140.6 6.5 152 0 164.8 0H283.2c12.8 0 24.2 6.5 29.6 17.7L330.9 64H400c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32s14.3-32 32-32h69.1L135.2 17.7zM248 248V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm-96 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm192 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zM416 128H32v320c0 35.3 28.7 64 64 64H352c35.3 0 64-28.7 64-64V128z"/></svg>
+            </button>
         `;
         container.appendChild(optionDiv);
     }
@@ -86,18 +572,34 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             titleInput.value = data.title;
             questionsContainer.innerHTML = ''; // Limpiar "cargando..."
+            // Reiniciar questionCounter para que la numeración empiece correctamente con preguntas existentes
+            questionCounter = 0; 
             data.questions.forEach(q => addQuestion(q));
-            questionCounter = data.questions.length;
+        })
+        .catch(error => {
+            console.error('Error al cargar cuestionario:', error);
+            questionsContainer.innerHTML = '<p class="text-center text-danger">No se pudo cargar el cuestionario. Por favor, intente de nuevo.</p>';
+            errorMessage.textContent = 'Error al cargar el cuestionario. Verifica tu conexión o el ID del cuestionario.';
+            errorMessage.classList.remove('d-none');
         });
 
     addQuestionBtn.addEventListener('click', () => addQuestion());
 
     questionsContainer.addEventListener('click', function(event) {
-        if (event.target.classList.contains('add-option-btn')) {
-            addOption(event.target.previousElementSibling);
+        // Manejar clic en "Añadir Opción" (botón o SVG dentro)
+        if (event.target.classList.contains('add-option-btn') || event.target.closest('.add-option-btn')) { 
+            const targetButton = event.target.closest('.add-option-btn');
+            // 'previousElementSibling' es el div.options-container
+            addOption(targetButton.previousElementSibling);
         }
-        if (event.target.classList.contains('remove-option-btn')) { event.target.closest('.input-group').remove(); }
-        if (event.target.classList.contains('remove-question-btn')) { event.target.closest('.card').remove(); }
+        // Manejar clic en "Eliminar Opción" (botón o SVG dentro)
+        if (event.target.classList.contains('remove-option-btn') || event.target.closest('.remove-option-btn')) {
+             event.target.closest('.input-group').remove();
+        }
+        // Manejar clic en "Eliminar Pregunta" (botón o SVG dentro)
+        if (event.target.classList.contains('remove-question-btn') || event.target.closest('.remove-question-btn')) {
+             event.target.closest('.question-card').remove();
+        }
     });
 
     // --- Manejar el envío del formulario ---
@@ -109,21 +611,63 @@ document.addEventListener('DOMContentLoaded', function() {
             title: titleInput.value,
             questions: []
         };
+        
+        let isValid = true; // Variable para controlar la validación
+        
+        // Validación del título del cuestionario
+        if (!titleInput.value.trim()) {
+            isValid = false;
+            titleInput.classList.add('is-invalid');
+        } else {
+            titleInput.classList.remove('is-invalid');
+        }
 
         document.querySelectorAll('.question-card').forEach(card => {
-            const questionData = {
-                id: card.dataset.questionId ? parseInt(card.dataset.questionId) : null,
-                text: card.querySelector('.question-text').value,
-                options: []
-            };
-            card.querySelectorAll('.input-group').forEach(optDiv => {
-                questionData.options.push({
-                    id: optDiv.dataset.optionId ? parseInt(optDiv.dataset.optionId) : null,
-                    text: optDiv.querySelector('.option-text').value
-                });
+            const questionTextElement = card.querySelector('.question-text');
+            const questionText = questionTextElement.value.trim();
+            
+            if (!questionText) {
+                isValid = false;
+                questionTextElement.classList.add('is-invalid'); // Clase para Bootstrap de input inválido
+                return; // Salta a la siguiente iteración de forEach si la pregunta está vacía
+            } else {
+                questionTextElement.classList.remove('is-invalid');
+            }
+
+            const options = [];
+            let hasValidOptions = false; // Bandera para verificar si hay al menos una opción válida
+            card.querySelectorAll('.option-text').forEach(optionInput => {
+                const optionText = optionInput.value.trim();
+                if (optionText) { // Solo añade opciones con texto
+                    options.push({ 
+                        id: optionInput.parentElement.dataset.optionId ? parseInt(optionInput.parentElement.dataset.optionId) : null,
+                        text: optionText 
+                    });
+                    hasValidOptions = true;
+                    optionInput.classList.remove('is-invalid');
+                } else {
+                    optionInput.classList.add('is-invalid');
+                    isValid = false;
+                }
             });
-            payload.questions.push(questionData);
+
+            if (!hasValidOptions) {
+                isValid = false;
+                // Podrías añadir un mensaje visual específico si una pregunta no tiene opciones
+            }
+            
+            payload.questions.push({ 
+                id: card.dataset.questionId ? parseInt(card.dataset.questionId) : null,
+                text: questionText, 
+                options: options 
+            });
         });
+
+        if (!isValid) {
+            errorMessage.textContent = 'Por favor, asegúrate de que el título del cuestionario, todas las preguntas y opciones tengan texto válido. Cada pregunta debe tener al menos una opción.';
+            errorMessage.classList.remove('d-none');
+            return; // Detiene el envío del formulario
+        }
 
         fetch(`/api/questionnaires/${questionnaireId}/`, {
             method: 'PUT', // Usamos PUT para una actualización completa
@@ -140,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error al actualizar:', error);
-            errorMessage.textContent = 'Ocurrió un error. Asegúrate de que todos los campos tengan texto.';
+            errorMessage.textContent = error.detail || 'Ocurrió un error al actualizar el cuestionario. Verifica tus datos.';
             errorMessage.classList.remove('d-none');
         });
     });

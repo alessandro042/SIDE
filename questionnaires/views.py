@@ -1,9 +1,14 @@
-from django.db.models import Count
+from django.db.models import Count, Sum
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
+from django.utils import timezone # <--- AÑADIR ESTA LÍNEA
+from datetime import timedelta # <--- AÑADIR ESTA LÍNEA
+from django.http import Http404 # <--- AÑADIR ESTA LÍNEA
+from django.db.models.functions import TruncDay
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
+from users.models import User
 from .models import Questionnaire, Submission, Question, Option, Answer
 from .serializers import (
     QuestionnaireAdminSerializer,
@@ -173,3 +178,79 @@ class CheckSubmissionView(APIView):
         ).exists()
 
         return Response({'has_submitted': has_submitted})
+    
+
+
+# ... (resto de tus vistas como PublicQuestionnaireView, SubmissionView, CheckSubmissionView) ...
+
+class DashboardStatsView(APIView):
+    """
+    Vista API para obtener estadísticas generales del dashboard.
+    Solo accesible por usuarios autenticados.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        # 1. Total de Cuestionarios Creados (solo activos, no borrados)
+        total_questionnaires = Questionnaire.objects.filter(is_deleted=False).count()
+
+        # 2. Total de Respuestas Recibidas (sumar las de todos los cuestionarios)
+        # Asegúrate de que Submission exista y esté relacionado correctamente
+        total_submissions = Submission.objects.count()
+
+        # 3. Total de Usuarios Registrados (en tu sistema, asumiendo todos los roles)
+        total_users = User.objects.count() # Contar todos los usuarios en el sistema
+
+        # 4. Tendencia de Respuestas Recibidas (ej. últimos 30 días)
+        # Puedes ajustar el rango de días según lo necesites
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=30)
+
+        # Agrupar respuestas por día y contarlas
+        submissions_by_day = Submission.objects.filter(
+            created_at__range=[start_date, end_date]
+        ).annotate(
+            day=TruncDay('created_at')
+        ).values('day').annotate(
+            count=Count('id')
+        ).order_by('day')
+
+        # Formatear los datos para Chart.js
+        trend_labels = []
+        trend_data = []
+        current_date = start_date
+        while current_date <= end_date:
+            # Buscar el conteo para este día, si no existe, es 0
+            count_for_day = next((item['count'] for item in submissions_by_day if item['day'].date() == current_date.date()), 0)
+            trend_labels.append(current_date.strftime('%d/%b')) # Formato "01/Jul"
+            trend_data.append(count_for_day)
+            current_date += timedelta(days=1)
+
+
+        # 5. Distribución de Cuestionarios por Tipo/Título (ej. los 5 más populares por respuestas)
+        # Esto asume que el "tipo" se infiere del título o una categoría
+        # Contaremos las respuestas por cuestionario y luego tomaremos los N primeros
+        questionnaire_responses = Questionnaire.objects.filter(
+            is_deleted=False, # Solo cuestionarios no borrados
+            is_active=True # Opcional: solo cuestionarios activos
+        ).annotate(
+            total_responses=Count('submission')
+        ).order_by('-total_responses')[:5] # Los 5 con más respuestas
+
+        type_labels = [q.title for q in questionnaire_responses]
+        type_data = [q.total_responses for q in questionnaire_responses]
+
+
+        return Response({
+            'total_questionnaires': total_questionnaires,
+            'total_submissions': total_submissions,
+            'total_users': total_users,
+            'submissions_trend': {
+                'labels': trend_labels,
+                'data': trend_data,
+            },
+            'questionnaire_type_distribution': {
+                'labels': type_labels,
+                'data': type_data,
+            },
+        }, status=status.HTTP_200_OK)

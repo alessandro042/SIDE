@@ -1,99 +1,539 @@
-{% extends "base.html" %}
-
-{% block title %}Acceso{% endblock %}
-
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h3 class="text-center mb-3">Iniciar Sesión (Admin)</h3>
-                <div id="admin-error-message" class="alert alert-danger d-none"></div>
-                <form id="login-form">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Correo Electrónico</label>
-                        <input type="email" class="form-control" id="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Contraseña</label>
-                        <input type="password" class="form-control" id="password" required>
-                    </div>
-                    <button type="submit" id="login-btn" class="btn btn-primary w-100">Entrar</button>
-                </form>
-            </div>
-        </div>
+<style>
+    /* Importar fuentes de Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    /* CORRECCIÓN: URL correcta de Google Fonts para Roboto */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+    /* Nueva fuente: Montserrat para los títulos estilo "Oracle" */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap');
 
-        <div class="card">
-            <div class="card-body">
-                <h3 class="text-center mb-3">Contestar Encuesta</h3>
-                <div id="survey-error-message" class="alert alert-warning d-none"></div>
-                <form id="survey-code-form">
-                    <div class="mb-3">
-                        <label for="access-code" class="form-label">Introduce el Código de Acceso</label>
-                        <input type="text" class="form-control text-uppercase" id="access-code" placeholder="EJ: E5374B" required>
-                    </div>
-                    <button type="submit" class="btn btn-secondary w-100">Continuar</button>
-                </form>
+    /* Paleta de colores: Neutra con acentos inspirados en Oracle Red */
+    :root {
+        --main-bg-light: #F8FAFD; /* Fondo general muy claro, casi blanco con toque frío */
+        --panel-left-bg: #FFFFFF; /* Panel izquierdo en blanco puro */
+        --panel-right-bg: #F4F7FB; /* Panel derecho en gris muy claro para distinción */
+
+        --oracle-red-accent: #A83C3C; /* Rojo sofisticado y desaturado (tu acento principal) */
+        --oracle-red-hover: #8B2F2F; /* Versión más oscura para hover */
+        --oracle-red-alert: #D65A5A; /* Rojo estándar para alertas de error */
+
+        --text-dark-blue-grey: #333F4F; /* Azul grisáceo oscuro para texto principal */
+        --text-medium-grey: #6C7A89; /* Gris medio para texto secundario/párrafos */
+        
+        --border-light-grey: #DDE2E7; /* Borde muy claro */
+        --input-focus-border: #9BB8D3; /* Borde de input en foco (azul suave para no saturar con rojo) */
+
+        --neutral-white: #FFFFFF;
+        --error-bg-light: #FCEDED; /* Fondo de error muy pálido */
+        --warning-bg-light: #FFFBF0; /* Fondo de advertencia muy pálido */
+        --success-bg-light: #E9FBF3; /* Fondo de éxito muy pálido */
+        --warning-text: #EBC65D; /* Amarillo cálido para advertencias */
+        --success-text: #66BB6A; /* Verde suave para éxito */
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--main-bg-light);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        color: var(--text-medium-grey);
+    }
+
+    .auth-container {
+        display: flex;
+        background-color: var(--neutral-white);
+        border-radius: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        width: 90%;
+        max-width: 1100px;
+        min-height: 600px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Columna izquierda (código de acceso) */
+    .panel-left {
+        flex: 1;
+        background: var(--panel-left-bg);
+        color: var(--text-dark-blue-grey);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 50px;
+        text-align: center;
+        transition: transform 0.6s ease-in-out;
+        transform: translateX(0);
+        position: relative;
+    }
+
+    .panel-left h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 2.8em;
+        margin-bottom: 25px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        color: var(--text-dark-blue-grey);
+    }
+
+    .panel-left p {
+        font-size: 1.1em;
+        line-height: 1.8;
+        margin-bottom: 40px;
+        max-width: 450px;
+        font-weight: 400;
+        opacity: 0.9;
+        color: var(--text-medium-grey);
+    }
+
+    /* Label del código de acceso - PANEL IZQUIERDO */
+    .panel-left .form-group label {
+        color: var(--text-dark-blue-grey);
+        font-weight: 600;
+    }
+
+    /* Input del código de acceso en el panel izquierdo */
+    .panel-left .form-control {
+        background-color: var(--neutral-white);
+        border: 1px solid var(--border-light-grey);
+        color: var(--text-dark-blue-grey);
+        font-weight: 500;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .panel-left .form-control::placeholder {
+        color: var(--text-medium-grey);
+        opacity: 0.8;
+    }
+
+    .panel-left .form-control:focus {
+        border-color: var(--input-focus-border);
+        box-shadow: 0 0 0 4px rgba(155, 184, 211, 0.3);
+        background-color: var(--neutral-white);
+    }
+
+    /* Columna derecha (login de admin) - Fondo ligeramente diferente para distinción */
+    .panel-right {
+        flex: 1;
+        background-color: var(--panel-right-bg);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 50px;
+        text-align: center;
+        transition: transform 0.6s ease-in-out;
+        transform: translateX(0);
+    }
+
+    .panel-right h2 {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 2.8em;
+        margin-bottom: 40px;
+        color: var(--text-dark-blue-grey);
+        font-weight: 700;
+        letter-spacing: 0.8px;
+    }
+
+    /* Estilos generales para formularios (panel derecho) */
+    .form-group {
+        margin-bottom: 30px;
+        text-align: left;
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: var(--text-dark-blue-grey);
+        font-size: 1em;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 16px 20px;
+        border: 1px solid var(--border-light-grey);
+        border-radius: 12px;
+        font-size: 1.05em;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        box-sizing: border-box;
+        color: var(--text-dark-blue-grey);
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-medium-grey);
+        opacity: 0.7;
+    }
+
+    .form-control:focus {
+        border-color: var(--input-focus-border);
+        box-shadow: 0 0 0 5px rgba(155, 184, 211, 0.25);
+        outline: none;
+        background-color: var(--neutral-white);
+    }
+
+    /* Estilos para botones */
+    .btn-primary {
+        background-color: var(--oracle-red-accent);
+        color: var(--neutral-white);
+        padding: 16px 35px;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.2em;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        width: 100%;
+        max-width: 420px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        box-shadow: 0 8px 20px rgba(168, 60, 60, 0.25);
+    }
+
+    .btn-primary:hover {
+        background-color: var(--oracle-red-hover);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 25px rgba(139, 47, 47, 0.35);
+    }
+
+    .btn-secondary {
+        background-color: var(--text-dark-blue-grey);
+        color: var(--neutral-white);
+        padding: 16px 35px;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.2em;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        width: 100%;
+        max-width: 420px;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        box-shadow: 0 8px 20px rgba(51, 63, 79, 0.25);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--text-medium-grey);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 25px rgba(108, 122, 137, 0.35);
+    }
+
+    /* Mensajes de error/éxito */
+    .alert {
+        padding: 18px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        font-size: 1em;
+        text-align: center;
+        width: 100%;
+        max-width: 420px;
+        box-sizing: border-box;
+        font-weight: 500;
+    }
+
+    .alert-danger {
+        background-color: var(--error-bg-light);
+        color: var(--oracle-red-alert);
+        border: 1px solid var(--oracle-red-alert);
+    }
+
+    .alert-warning {
+        background-color: var(--warning-bg-light);
+        color: var(--warning-text);
+        border: 1px solid var(--warning-text);
+    }
+    
+    .alert-success {
+        background-color: var(--success-bg-light);
+        color: var(--success-text);
+        border: 1px solid var(--success-text);
+    }
+
+    .d-none {
+        display: none !important;
+    }
+
+    /* Animación de fondo */
+    .background-animation {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 0;
+    }
+
+    .background-animation span {
+        position: absolute;
+        display: block;
+        list-style: none;
+        background: rgba(168, 60, 60, 0.4);
+        animation: animate 20s linear infinite;
+        bottom: -150px;
+    }
+
+    .background-animation span:nth-child(1) { left: 25%; width: 90px; height: 90px; animation-delay: 0s; }
+    .background-animation span:nth-child(2) { left: 10%; width: 30px; height: 30px; animation-delay: 2s; animation-duration: 15s; }
+    .background-animation span:nth-child(3) { left: 70%; width: 40px; height: 40px; animation-delay: 4s; }
+    .background-animation span:nth-child(4) { left: 40%; width: 70px; height: 70px; animation-delay: 0s; animation-duration: 22s; }
+    .background-animation span:nth-child(5) { left: 65%; width: 30px; height: 30px; animation-delay: 0s; }
+    .background-animation span:nth-child(6) { left: 75%; width: 120px; height: 120px; animation-delay: 3s; }
+    .background-animation span:nth-child(7) { left: 35%; width: 160px; height: 160px; animation-delay: 7s; }
+    .background-animation span:nth-child(8) { left: 50%; width: 35px; height: 35px; animation-delay: 15s; animation-duration: 50s; }
+    .background-animation span:nth-child(9) { left: 20%; width: 25px; height: 25px; animation-delay: 2s; animation-duration: 40s; }
+    .background-animation span:nth-child(10) { left: 85%; width: 160px; height: 160px; animation-delay: 0s; animation-duration: 13s; }
+
+    @keyframes animate {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; border-radius: 0; }
+        100% { transform: translateY(-1000px) rotate(720deg); opacity: 0; border-radius: 50%; }
+    }
+
+    /* Responsividad */
+    @media (max-width: 768px) {
+        .auth-container {
+            flex-direction: column;
+            width: 95%;
+            max-width: 500px;
+            min-height: auto;
+            border-radius: 20px;
+        }
+
+        .panel-left, .panel-right {
+            padding: 40px;
+            width: 100%;
+            border-radius: 0;
+        }
+
+        .panel-left {
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .panel-right {
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+
+        .panel-left h2, .panel-right h2 {
+            font-size: 2.4em;
+        }
+
+        .panel-left p, .panel-right p {
+            font-size: 1em;
+        }
+
+        .form-group, .btn-primary, .btn-secondary, .alert {
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div class="background-animation">
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+</div>
+
+<div class="auth-container">
+    <div class="panel-left">
+        <h2>Bienvenido!</h2>
+        <p>
+            Si tienes un código de acceso para una encuesta, ingrésalo a continuación para participar.
+            ¡Gracias por tu valiosa opinión!
+        </p>
+        <form id="survey-form"> {# AÑADIDO: <form> envolviendo los campos de la encuesta #}
+            <div class="form-group">
+                <label for="access-code" class="form-label">Código de Acceso</label>
+                <input type="text" class="form-control text-uppercase" id="access-code" placeholder="EJ: E5374B" required autocomplete="off">
             </div>
-        </div>
+            <div id="survey-error-message" class="alert alert-warning d-none"></div>
+            <button type="submit" class="btn-secondary" id="survey-submit-btn">Continuar</button>
+        </form>
+    </div>
+
+    <div class="panel-right">
+        <h2>Acceso de Administrador</h2>
+        <p>
+            Solo usuarios administradores pueden iniciar sesión aquí. Si eres un administrador, por favor introduce tus credenciales.
+        </p>
+        <div id="admin-error-message" class="alert alert-danger d-none"></div>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email" class="form-label">Correo Electrónico</label>
+                <input type="email" class="form-control" id="email" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" class="form-control" id="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" id="login-btn" class="btn-primary">Entrar</button>
+        </form>
     </div>
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- SOLO PARA DEPURACIÓN DEL FORMULARIO DE ENCUESTA ---
+    const surveyForm = document.getElementById('survey-form');
+    if (surveyForm) {
+        console.log("DEBUG: Formulario 'survey-form' encontrado."); // ¿Se ve esto en consola?
+        surveyForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Detiene la recarga
+            console.log("DEBUG: Evento 'submit' del formulario de encuesta disparado."); // ¿Se ve esto en consola?
+            alert("DEBUG: Previniendo recarga. El formulario se envió."); // ¿Se ve esta alerta?
+
+            // Si llegamos hasta aquí, el JavaScript funciona correctamente.
+            // Si la página aún se recarga después de esta alerta, el problema es DEL SERVIDOR DJANGO.
+            // Si la página NO se recarga, entonces el problema anterior ya no existe.
+        });
+    } else {
+        console.error("DEBUG FATAL: Formulario 'survey-form' NO encontrado.");
+    }
+    // --- FIN DEPURACIÓN DEL FORMULARIO DE ENCUESTA ---
+
+    // Lógica para el formulario de LOGIN DE ADMIN (mantener como está para las pruebas del survey)
+    document.getElementById('login-btn').addEventListener('click', function(event) {
+        event.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorMessage = document.getElementById('admin-error-message');
+        errorMessage.classList.add('d-none');
+
+        fetch('/auth/token/login/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password })
+        })
+        .then(response => {
+            if (!response.ok) { return response.json().then(errorData => { throw errorData; }); }
+            return response.json();
+        })
+        .then(data => {
+            localStorage.setItem('authToken', data.auth_token);
+            window.location.href = '/dashboard/';
+        })
+        .catch(error => {
+            errorMessage.textContent = 'No se pudo iniciar sesión con las credenciales proporcionadas.';
+            errorMessage.classList.remove('d-none');
+        });
+    });
+});
 // Lógica para el formulario de LOGIN DE ADMIN
-document.getElementById('login-btn').addEventListener('click', function(event) {
-    event.preventDefault(); 
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const errorMessage = document.getElementById('admin-error-message');
-    errorMessage.classList.add('d-none');
+        document.getElementById('login-btn').addEventListener('click', function(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('admin-error-message');
+            errorMessage.classList.add('d-none');
 
-    fetch('/auth/token/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
-    })
-    .then(response => {
-        if (!response.ok) { return response.json().then(errorData => { throw errorData; }); }
-        return response.json();
-    })
-    .then(data => {
-        localStorage.setItem('authToken', data.auth_token);
-        window.location.href = '/dashboard/';
-    })
-    .catch(error => {
-        errorMessage.textContent = 'No se pudo iniciar sesión con las credenciales proporcionadas.';
-        errorMessage.classList.remove('d-none');
-    });
-});
+            fetch('/auth/token/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password })
+            })
+            .then(response => {
+                if (!response.ok) { return response.json().then(errorData => { throw errorData; }); }
+                return response.json();
+            })
+            .then(data => {
+                localStorage.setItem('authToken', data.auth_token);
+                window.location.href = '/dashboard/';
+            })
+            .catch(error => {
+                errorMessage.textContent = 'No se pudo iniciar sesión con las credenciales proporcionadas.';
+                errorMessage.classList.remove('d-none');
+            });
+        });
 
-// Lógica para el CÓDIGO DE ENCUESTA
-document.getElementById('survey-code-form').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const accessCode = document.getElementById('access-code').value.trim().toUpperCase();
-    const surveyErrorMessage = document.getElementById('survey-error-message');
-    surveyErrorMessage.classList.add('d-none');
+        // Lógica para el CÓDIGO DE ENCUESTA - Adjuntado al evento 'submit' del FORMULARIO
+        const surveyForm = document.getElementById('survey-form');
+        if (surveyForm) { // Solo si el formulario existe
+            surveyForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Detiene la recarga de la página
+                
+                const accessCode = document.getElementById('access-code').value.trim().toUpperCase();
+                const surveyErrorMessage = document.getElementById('survey-error-message');
+                surveyErrorMessage.classList.add('d-none');
 
-    if (!accessCode) return;
+                if (!accessCode) {
+                    surveyErrorMessage.textContent = 'Por favor, introduce un código de acceso.';
+                    surveyErrorMessage.classList.remove('d-none');
+                    return;
+                }
 
-    fetch('/api/questionnaires/public/check-submission/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_code: accessCode })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.has_submitted) {
-            surveyErrorMessage.textContent = 'Ya has contestado esta encuesta anteriormente.';
-            surveyErrorMessage.classList.remove('d-none');
+                // Debugging: Alert para confirmar que esta parte del JS se está ejecutando
+                alert("Intentando verificar código de encuesta y redirigir."); 
+                console.log("Código de acceso intentado:", accessCode); // Mostrar en consola
+
+                fetch('/api/questionnaires/public/check-submission/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ access_code: accessCode })
+                })
+                .then(response => {
+                    // Si el backend responde un error HTTP, esto lo detecta.
+                    if (!response.ok) {
+                        // Si el backend envía un JSON con detalle de error, lo capturamos
+                        return response.json().then(errorData => {
+                            // Debugging: Si hay un error de API, mostrarlo
+                            console.error("Error de API en check-submission:", errorData);
+                            throw errorData; // Propagar el error
+                        }).catch(() => {
+                            // Si no es un JSON válido (ej. 404 HTML puro), lanzar un error genérico
+                            throw new Error("Respuesta no OK y no es JSON válido.");
+                        });
+                    }
+                    // Si la respuesta es OK, procedemos a parsear el JSON
+                    return response.json();
+                })
+                .then(data => {
+                    // Debugging: Mostrar la respuesta exitosa de la API
+                    console.log("Respuesta exitosa de check-submission:", data);
+
+                    if (data.has_submitted) {
+                        surveyErrorMessage.textContent = 'Ya has contestado esta encuesta anteriormente.';
+                        surveyErrorMessage.classList.remove('d-none');
+                    } else {
+                        // Si todo es exitoso y no ha sido contestada, redirige
+                        alert("Redirigiendo a la encuesta..."); // Confirmar redirección
+                        window.location.href = `/form/${accessCode}/`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error final en la verificación del código:', error);
+                    let displayMessage = 'Ocurrió un error al verificar el código.'; // Mensaje por defecto
+                    if (error.detail) {
+                        displayMessage = error.detail; // Si el backend dio un mensaje específico
+                    } else if (error.message) {
+                        displayMessage = error.message; // Si es un error genérico de JS
+                    }
+                    surveyErrorMessage.textContent = displayMessage;
+                    surveyErrorMessage.classList.remove('d-none');
+                });
+            });
         } else {
-            window.location.href = `/form/${accessCode}/`;
+            console.error("Error FATAL: El formulario de encuesta (ID 'survey-form') NO se encontró en el DOM.");
+            // Esto es lo que causaba el TypeError.
+            // Si ves este error en consola, significa que survey-form no está en el HTML renderizado.
         }
-    })
-    .catch(error => {
-        surveyErrorMessage.textContent = 'Ocurrió un error al verificar el código.';
-        surveyErrorMessage.classList.remove('d-none');
-    });
-});
+
 </script>
 {% endblock %}

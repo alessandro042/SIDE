@@ -3,21 +3,696 @@
 {% block title %}Mi Panel de Control{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items_center mb-4">
-    <h2 id="dashboard-title">Mis Cuestionarios</h2>
-    <a href="{% url 'create-questionnaire-page' %}" class="btn btn-primary">Crear Nuevo Cuestionario</a>
+<style>
+    /* Paleta de colores: Neutra con acentos inspirados en Oracle Red (copiada de base.html) */
+    :root {
+        --main-bg-light: #F8FAFD; /* Fondo general muy claro, casi blanco con toque frío */
+        --panel-left-bg: #FFFFFF;
+        --panel-right-bg: #F4F7FB; /* Para paneles, dashboards */
+        --oracle-red-accent: #A83C3C; /* Rojo sofisticado y desaturado (tu acento principal) */
+        --oracle-red-hover: #8B2F2F; /* Versión más oscura para hover */
+        --oracle-red-alert: #D65A5A; /* Rojo estándar para alertas de error */
+
+        --text-dark-blue-grey: #333F4F; /* Azul grisáceo oscuro para texto principal y iconos */
+        --text-medium-grey: #6C7A89; /* Gris medio para texto secundario/párrafos */
+        
+        --border-light-grey: #DDE2E7; /* Borde muy claro */
+        --input-focus-border: #9BB8D3; /* Borde de input en foco (azul suave para no saturar con rojo) */
+
+        --neutral-white: #FFFFFF;
+        --error-bg-light: #FCEDED;
+        --warning-bg-light: #FFFBF0;
+        --success-bg-light: #E9FBF3;
+        --warning-text: #EBC65D;
+        --success-text: #66BB6A; /* Mantener este verde para otros usos de éxito */
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--main-bg-light); /* Fondo consistente con la paleta */
+    }
+
+    /* Contenedor principal del dashboard */
+    .dashboard-container {
+        padding: 25px 20px; /* Reducido un poco */
+        max-width: 1200px; /* Ancho ajustado */
+        margin: 20px auto;
+        background-color: var(--neutral-white);
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px; /* Espacio reducido */
+        padding-bottom: 15px; /* Espacio reducido */
+        border-bottom: 1px solid var(--border-light-grey); /* Borde suave */
+    }
+
+    .dashboard-header h2 {
+        font-family: 'Montserrat', sans-serif; /* Consistente con el sidebar */
+        font-size: 1.8em; /* Título principal más pequeño */
+        color: var(--text-dark-blue-grey);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    /* Botón "Crear Nuevo Cuestionario" como un icono de más (circular) */
+    .btn-create-custom {
+        width: 45px; /* Tamaño un poco más pequeño */
+        height: 45px;
+        border-radius: 50%;
+        background-color: var(--oracle-red-accent); /* Color de acento de Oracle */
+        color: var(--neutral-white);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: none;
+        cursor: pointer;
+        font-size: 1.8em; /* Ajustado para el tamaño del botón */
+        line-height: 1;
+        text-decoration: none;
+        box-shadow: 0 5px 12px rgba(168, 60, 60, 0.3); /* Sombra con color de acento */
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    .btn-create-custom:hover {
+        background-color: var(--oracle-red-hover); /* Color de hover de Oracle */
+        transform: translateY(-3px) rotate(90deg); /* Menos desplazamiento */
+        box-shadow: 0 8px 20px rgba(139, 47, 47, 0.5);
+    }
+
+    .btn-create-custom svg {
+        width: 22px; /* Tamaño del icono */
+        height: 22px;
+        fill: currentColor;
+        transition: transform 0.2s ease;
+    }
+
+    .btn-create-custom:hover svg {
+        transform: rotate(-90deg);
+    }
+
+    /* ================================================= */
+    /* ESTILOS DE WIDGETS Y SECCIONES DEL DASHBOARD */
+    /* ================================================= */
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Min-width reducido */
+        gap: 20px; /* Espacio reducido */
+        margin-bottom: 30px; /* Espacio reducido */
+    }
+
+    .kpi-card {
+        background-color: var(--neutral-white);
+        border-radius: 10px; /* Bordes ligeramente menos redondeados */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Sombra más suave */
+        padding: 18px; /* Padding reducido */
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 110px; /* Altura mínima ajustada */
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid var(--border-light-grey);
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px); /* Menos desplazamiento */
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08); /* Sombra más suave */
+    }
+
+    .kpi-card .icon-wrapper {
+        width: 45px; /* Tamaño de icono más pequeño */
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px; /* Espacio reducido */
+        /* Color de fondo por defecto del wrapper, aplicando a todos si no hay override */
+        background-color: rgba(168, 60, 60, 0.1); /* Color de acento sutil */
+    }
+    .kpi-card .icon-wrapper svg {
+        width: 22px; /* Tamaño del SVG dentro del icono */
+        height: 22px;
+        /* Color por defecto del SVG, aplicando a todos si no hay override */
+        fill: var(--oracle-red-accent); /* Color de acento de Oracle */
+    }
+    /* Estilos específicos para el KPI de "Respuestas Recibidas" (rojo) */
+    .kpi-card.red .icon-wrapper { background-color: rgba(214, 90, 90, 0.1); }
+    .kpi-card.red .icon-wrapper svg { fill: var(--oracle-red-alert); }
+    
+    /* ESTILO MODIFICADO: KPI de "Usuarios Registrados" (antes verde, ahora rojo/acento) */
+    .kpi-card.green .icon-wrapper { background-color: rgba(168, 60, 60, 0.1); } /* Fondo sutil con el rojo de acento */
+    .kpi-card.green .icon-wrapper svg { fill: var(--oracle-red-accent); } /* Color del icono principal de acento */
+
+
+    .kpi-card .kpi-value {
+        font-size: 2em; /* Tamaño grande para el número, ajustado */
+        font-weight: 700;
+        color: var(--text-dark-blue-grey);
+        line-height: 1.1;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 0.8em; /* Tamaño más pequeño */
+        color: var(--text-medium-grey);
+        margin-top: 5px;
+    }
+
+    /* Sección de gráficas principales */
+    .main-charts-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Min-width reducido */
+        gap: 20px; /* Espacio reducido */
+        margin-bottom: 30px; /* Espacio reducido */
+    }
+
+    .chart-panel-card {
+        background-color: var(--neutral-white);
+        border-radius: 12px; /* Bordes ligeramente menos redondeados */
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* Sombra más suave */
+        padding: 20px; /* Padding reducido */
+        height: 350px; /* ALTURA FIJA ligeramente reducida */
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+    .chart-panel-card .chart-title {
+        font-size: 1.2em; /* Título de gráfica más pequeño */
+        font-weight: 600;
+        color: var(--text-dark-blue-grey);
+        margin-bottom: 15px; /* Espacio reducido */
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .chart-panel-card .chart-canvas-wrapper {
+        flex-grow: 1;
+        position: relative;
+        min-height: 0;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chart-panel-card canvas {
+        height: 100% !important;
+        width: 100% !important;
+    }
+
+    .chart-panel-card p.text-muted {
+        margin-top: 10px; /* Espacio reducido */
+        flex-shrink: 0;
+        text-align: center;
+        font-size: 0.85em; /* Tamaño de texto para mensajes */
+        color: var(--text-medium-grey);
+    }
+
+
+    /* Contenedor de las tarjetas de cuestionarios (usando Bootstrap Grid) */
+    .questionnaire-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Min-width reducido */
+        gap: 20px; /* Espacio reducido */
+    }
+
+    /* Estilos para las tarjetas de cuestionarios */
+    .questionnaire-card {
+        background-color: var(--neutral-white);
+        border-radius: 12px; /* Bordes ligeramente menos redondeados */
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* Sombra más suave */
+        padding: 20px; /* Padding reducido */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .questionnaire-card:hover {
+        transform: translateY(-3px); /* Menos desplazamiento */
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12); /* Sombra más suave */
+    }
+
+    /* Fondo animado para las tarjetas */
+    .card-bg-effect {
+        position: absolute;
+        bottom: -15px; /* Ajustado */
+        right: -15px; /* Ajustado */
+        width: 70px; /* Tamaño ajustado */
+        height: 70px; /* Tamaño ajustado */
+        /* Usando rgba de tu color de acento */
+        background: linear-gradient(45deg, rgba(168, 60, 60, 0.15), rgba(168, 60, 60, 0.05));
+        border-radius: 50%;
+        opacity: 0.8;
+        filter: blur(10px); /* Menos blur */
+        z-index: 0;
+        transition: transform 0.5s ease-out, opacity 0.3s ease-out;
+    }
+    .questionnaire-card:hover .card-bg-effect {
+        transform: scale(1.1) translate(5px, 5px); /* Menos escalado y desplazamiento */
+        opacity: 1;
+    }
+
+    .card-content-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px; /* Espacio reducido */
+    }
+
+    .card-title-main {
+        font-size: 1.2em; /* Título de la tarjeta más pequeño */
+        margin-bottom: 3px; /* Espacio reducido */
+        color: var(--text-dark-blue-grey);
+        font-weight: 700;
+        line-height: 1.2;
+        padding-right: 8px;
+    }
+
+    .card-meta-info {
+        color: var(--text-medium-grey);
+        font-size: 0.75em; /* Tamaño de fuente aún más pequeño */
+        margin-top: 3px; /* Espacio reducido */
+        display: block;
+    }
+
+    .card-actions-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px; /* Espacio reducido */
+        padding-top: 15px; /* Espacio reducido */
+        border-top: 1px solid var(--border-light-grey); /* Separador de acciones */
+    }
+
+    .card-mini-stats {
+        font-size: 0.85em; /* Tamaño de estadísticas más pequeño */
+        color: var(--text-medium-grey);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px; /* Espacio reducido */
+    }
+    .card-mini-stats svg {
+        width: 16px; /* Tamaño de icono de stats */
+        height: 16px;
+        fill: var(--text-medium-grey); /* Color coherente con el texto */
+    }
+
+    .btn-action-group {
+        display: flex;
+        gap: 4px; /* Espacio aún más compacto */
+    }
+
+    /* Estilo base para los botones de acción con icono (reutilizado de otras páginas) */
+    .btn-icon-custom {
+        width: 34px; /* Tamaño aún más pequeño para las tarjetas */
+        height: 34px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 6px; /* Bordes ligeramente menos redondeados */
+        transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        text-decoration: none;
+        padding: 0;
+        border: none;
+        background-color: transparent;
+    }
+
+    /* Estilo para los SVGs dentro de los botones de acción */
+    .btn-icon-custom svg {
+        width: 16px; /* Tamaño del icono */
+        height: 16px;
+        fill: currentColor;
+    }
+
+    /* Colores específicos para los iconos (reutilizado y adaptado a paleta) */
+    .btn-icon-custom.qr { color: var(--text-dark-blue-grey); }
+    .btn-icon-custom.qr:hover { color: var(--text-dark-blue-grey); background-color: rgba(51, 63, 79, 0.1); }
+    .btn-icon-custom.stats { color: var(--text-medium-grey); } /* Cambiado a gris medio */
+    .btn-icon-custom.stats:hover { color: var(--text-dark-blue-grey); background-color: rgba(108, 122, 137, 0.1); }
+    .btn-icon-custom.edit { color: var(--oracle-red-accent); } /* Color de acento */
+    .btn-icon-custom.edit:hover { color: var(--oracle-red-hover); background-color: rgba(168, 60, 60, 0.1); }
+    .btn-icon-custom.delete { color: var(--oracle-red-alert); } /* Rojo de alerta para eliminar */
+    .btn-icon-custom.delete:hover { color: var(--oracle-red-hover); background-color: rgba(214, 90, 90, 0.1); }
+
+
+    /* Estilos para el Switch (Toggle) */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px; /* Ancho ajustado */
+        height: 26px; /* Altura ajustada */
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 26px; /* Ajuste para el nuevo tamaño */
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px; /* Ajuste del círculo */
+        width: 20px; /* Ajuste del círculo */
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: var(--oracle-red-accent); /* Color de acento cuando está activo */
+    }
+
+    input:focus + .slider {
+        box-shadow: 0 0 1px var(--oracle-red-accent);
+    }
+
+    input:checked + .slider:before {
+        -webkit-transform: translateX(24px); /* Ajuste del desplazamiento */
+        -ms-transform: translateX(24px);
+        transform: translateX(24px);
+    }
+
+    /* Estilos del Modal QR */
+    #qr-modal .modal-content { 
+        border-radius: 12px; 
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); 
+        padding: 15px; 
+        background-color: var(--neutral-white);
+    }
+    #qr-modal .modal-header { 
+        border-bottom: none; 
+        padding-bottom: 0; 
+        font-family: 'Montserrat', sans-serif;
+    }
+    #qr-modal .modal-title { 
+        font-weight: 600; 
+        color: var(--text-dark-blue-grey); 
+        font-size: 1.2em; /* Título del modal más pequeño */
+    }
+    #qrcode-container { 
+        border: 1px solid var(--border-light-grey); 
+        padding: 8px; 
+        border-radius: 6px; 
+        background-color: var(--main-bg-light); /* Fondo de QR con base clara */
+        display: inline-block !important; 
+    }
+    #qr-url-input { 
+        background-color: var(--main-bg-light); 
+        border: 1px solid var(--border-light-grey); 
+        cursor: text; 
+        font-size: 0.85em; /* Tamaño de input del QR más pequeño */
+        padding: 8px; 
+        border-radius: 6px; 
+        color: var(--text-dark-blue-grey);
+    }
+    #qr-url-input:focus { 
+        border-color: var(--input-focus-border); 
+        box-shadow: 0 0 0 3px rgba(155, 184, 211, 0.15); 
+        outline: none; 
+    }
+
+    /* Estilos del Modal de Confirmación */
+    .confirmation-modal .modal-content { 
+        border-radius: 12px; 
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); 
+        padding: 20px; 
+        text-align: center; 
+        background-color: var(--neutral-white);
+    }
+    .confirmation-modal .modal-header { 
+        border-bottom: none; 
+        padding-bottom: 0; 
+        display: flex; 
+        justify-content: center; 
+        position: relative; 
+    }
+    .confirmation-modal .modal-title { 
+        font-weight: 600; 
+        color: var(--oracle-red-alert); 
+        font-size: 1.4em; /* Título del modal más pequeño */
+        margin: 0; 
+        font-family: 'Montserrat', sans-serif;
+    }
+    .confirmation-modal .modal-body { 
+        padding: 15px 0; /* Padding reducido */
+        font-size: 0.9em; /* Texto del body más pequeño */
+        color: var(--text-medium-grey); 
+    }
+    .confirmation-modal .modal-body strong { color: var(--text-dark-blue-grey); }
+    .confirmation-modal .modal-footer { 
+        border-top: none; 
+        padding-top: 10px; 
+        display: flex; 
+        justify-content: center; 
+        gap: 10px; /* Espacio reducido */
+    }
+    .confirmation-modal .btn-close { position: absolute; top: 10px; right: 10px; font-size: 1em; opacity: 0.7; transition: opacity 0.2s ease; } /* Tamaño y posición ajustados */
+    .confirmation-modal .btn-close:hover { opacity: 1; }
+    .confirmation-icon { width: 50px; height: 50px; margin: 0 auto 15px auto; display: block; } /* Tamaño y margen ajustados */
+    .confirmation-icon svg { width: 100%; height: 100%; fill: var(--oracle-red-alert); }
+
+    /* Botones del Modal de Confirmación */
+    .btn-modal-secondary-custom { 
+        background-color: var(--main-bg-light); /* Fondo con gris muy claro */
+        color: var(--text-medium-grey); 
+        padding: 8px 15px; /* Padding reducido */
+        border: 1px solid var(--border-light-grey); 
+        border-radius: 6px; /* Bordes menos redondeados */
+        font-size: 0.85em; /* Tamaño de fuente más pequeño */
+        cursor: pointer; 
+        transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease; 
+        font-weight: 500; 
+        text-decoration: none; 
+    }
+    .btn-modal-secondary-custom:hover { 
+        background-color: var(--border-light-grey); 
+        color: var(--text-dark-blue-grey); 
+        transform: translateY(-1px); 
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
+    }
+    .btn-modal-primary-custom { 
+        background-color: var(--oracle-red-accent); 
+        color: var(--neutral-white); 
+        padding: 8px 15px; /* Padding reducido */
+        border: none; 
+        border-radius: 6px; /* Bordes menos redondeados */
+        font-size: 0.85em; /* Tamaño de fuente más pequeño */
+        cursor: pointer; 
+        transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; 
+        font-weight: 600; 
+    }
+    .btn-modal-primary-custom:hover { 
+        background-color: var(--oracle-red-hover); 
+        transform: translateY(-1px); 
+        box-shadow: 0 3px 8px rgba(168, 60, 60, 0.3); 
+    }
+
+    /* Media queries para responsividad del dashboard */
+    @media (max-width: 992px) {
+        .questionnaire-grid {
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Min-width aún más reducido */
+        }
+        .main-charts-section {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        .chart-panel-card {
+            height: 320px; /* Altura ajustada */
+        }
+    }
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 15px 10px;
+            margin: 10px auto;
+        }
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        .dashboard-header h2 {
+            margin-bottom: 10px;
+            font-size: 1.5em; /* Título aún más pequeño en móvil */
+        }
+        .btn-create-custom {
+            width: 40px; /* Tamaño del botón en móvil */
+            height: 40px;
+            font-size: 1.6em;
+        }
+        .btn-create-custom svg {
+            width: 20px;
+            height: 20px;
+        }
+        .kpi-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            padding: 15px;
+            min-height: 100px;
+        }
+        .kpi-card .kpi-value {
+            font-size: 1.8em;
+        }
+        .kpi-card .kpi-label {
+            font-size: 0.75em;
+        }
+        .kpi-card .icon-wrapper {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        .kpi-card .icon-wrapper svg {
+            width: 20px;
+            height: 20px;
+        }
+        .questionnaire-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        .questionnaire-card {
+            padding: 15px;
+        }
+        .card-title-main {
+            font-size: 1.1em;
+        }
+        .card-meta-info {
+            font-size: 0.7em;
+        }
+        .card-actions-section {
+            margin-top: 10px;
+            padding-top: 10px;
+        }
+        .card-mini-stats {
+            font-size: 0.8em;
+        }
+        .card-mini-stats svg {
+            width: 15px;
+            height: 15px;
+        }
+        .btn-icon-custom {
+            width: 30px;
+            height: 30px;
+        }
+        .btn-icon-custom svg {
+            width: 14px;
+            height: 14px;
+        }
+        .chart-panel-card {
+            height: 280px; /* Altura más reducida en móvil */
+            padding: 15px;
+        }
+        .chart-panel-card .chart-title {
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+        .chart-panel-card p.text-muted {
+            font-size: 0.8em;
+        }
+    }
+
+</style>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h2 id="dashboard-title">Mi Panel de Control</h2>
+        <a href="{% url 'create-questionnaire-page' %}" class="btn-create-custom" title="Crear un nuevo cuestionario">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                <path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/>
+            </svg>
+        </a>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zM96 112c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16zM64 352c0 0 0 0 0 0v32c0 0 0 0 0 0H384c0 0 0 0 0 0V352c0 0 0 0 0 0H64z"/></svg>
+            </div>
+            <div class="kpi-value" id="total-questionnaires">0</div>
+            <div class="kpi-label">Cuestionarios Creados</div>
+        </div>
+        <div class="kpi-card red">
+            <div class="icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M32 32h448c17.7 0 32 14.3 32 32v384c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32V64c0-17.7 14.3-32 32-32zM160 384c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V192c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v192zm96 0c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V128c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v256zm96 0c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V256c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v128z"/></svg>
+            </div>
+            <div class="kpi-value" id="total-submissions">0</div>
+            <div class="kpi-label">Respuestas Recibidas</div>
+        </div>
+        <div class="kpi-card green"> 
+            <div class="icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H224c-1.7 0-3.4 0-5.7 .3zM584.3 304c-2.4-.3-4.7-.3-7.7-.3H474.3c-2.4 0-4.7 0-7.7 .3c-23.7 3.2-46.1 11.2-64.6 23.9c-24.1 16.2-42.3 36.4-55.3 59.2c-7.3 12.7-12 26.2-14.3 40c-.3 1.8-.7 3.5-.7 5.3c0 16.4 13.3 29.7 29.7 29.7H610.3c16.4 0 29.7-13.3 29.7-29.7c0-98.5-79.8-178.3-178.3-178.3zm-39.7-48A128 128 0 1 0 456 0a128 128 0 1 0 0 256z"/></svg>
+            </div>
+            <div class="kpi-value" id="total-users">0</div>
+            <div class="kpi-label">Usuarios Registrados</div>
+        </div>
+    </div>
+
+    <div class="main-charts-section">
+        <div class="chart-panel-card">
+            <h3 class="chart-title">Tendencia de Respuestas Recibidas (Últimos 30 días)</h3>
+            <div class="chart-canvas-wrapper"> <canvas id="submissions-trend-chart"></canvas>
+            </div>
+            <p id="submissions-trend-fallback" class="text-center text-muted mt-3">Cargando datos de tendencia...</p>
+        </div>
+        <div class="chart-panel-card">
+            <h3 class="chart-title">Respuestas por Tipo de Cuestionario</h3>
+            <div class="chart-canvas-wrapper"> <canvas id="questionnaire-type-chart"></canvas>
+            </div>
+            <p id="questionnaire-type-fallback" class="text-center text-muted mt-3">Cargando datos de tipos de cuestionario...</p>
+        </div>
+    </div>
+
+    <div class="dashboard-header" style="margin-top: 40px;">
+        <h2>Cuestionarios Individuales</h2>
+        </div>
+
+    <div id="questionnaire-list" class="questionnaire-grid">
+        <p class="text-center text-muted col-span-full">Cargando cuestionarios...</p>
+    </div>
 </div>
 
-<div id="questionnaire-list" class="list-group">
-    <p>Cargando...</p>
-</div>
-
-<div class="modal fade" id="qr-modal" tabindex="-1">
+<div class="modal fade" id="qr-modal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Comparte tu Encuesta</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="qrModalLabel">Comparte tu Encuesta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
                 <div id="qrcode-container" class="mb-3 d-flex justify-content-center"></div>
@@ -28,19 +703,273 @@
     </div>
 </div>
 
+<div class="modal fade confirmation-modal" id="confirm-delete-questionnaire-modal" tabindex="-1" aria-labelledby="confirm-delete-questionnaire-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirm-delete-questionnaire-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <span class="confirmation-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 32c12.4 0 24.6 3.1 35.4 9L448 160V416c0 35.3-28.7 64-64 64H128c-35.3 0-64-28.7-64-64V160L220.6 41c10.8-5.9 23-9 35.4-9zM96 160V416c0 8.8 7.2 16 16 16H384c8.8 0 16-7.2 16-16V160H96zM272 256c0-8.8-7.2-16-16-16s-16 7.2-16 16v96c0 8.8 7.2 16 16 16s16-7.2 16-16V256zM256 128a32 32 0 1 0 0 64 32 32 0 1 0 0-64z"/></svg>
+                </span>
+                <p>¿Estás seguro de que quieres eliminar el cuestionario <strong><span id="confirm-questionnaire-title-span"></span></strong>?</p>
+                <p class="text-danger small">Esta acción no se puede deshacer y eliminará todas sus respuestas.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-modal-primary-custom" id="confirm-delete-questionnaire-btn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const token = localStorage.getItem('authToken');
     const listContainer = document.getElementById('questionnaire-list');
-    // Preparamos el modal de Bootstrap
     const qrModal = new bootstrap.Modal(document.getElementById('qr-modal'));
+    const confirmDeleteQuestionnaireModal = new bootstrap.Modal(document.getElementById('confirm-delete-questionnaire-modal'));
+
+    let questionnaireIdToDelete = null;
+    const confirmQuestionnaireTitleSpan = document.getElementById('confirm-questionnaire-title-span');
+    const confirmDeleteQuestionnaireBtn = document.getElementById('confirm-delete-questionnaire-btn');
+
+    // KPIs elements
+    const totalQuestionnairesEl = document.getElementById('total-questionnaires');
+    const totalSubmissionsEl = document.getElementById('total-submissions');
+    const totalUsersEl = document.getElementById('total-users');
+
+    // Chart.js instances
+    let submissionsTrendChartInstance = null;
+    let questionnaireTypeChartInstance = null;
+    let isFetchingStats = false; // Bandera para evitar llamadas fetch superpuestas
+
 
     if (!token) {
         window.location.href = '/login/';
         return;
     }
 
+    // --- Helper function to create gradients for charts ---
+    function createChartGradient(ctx, chartArea, colorStart, colorEnd) {
+        if (!ctx || !chartArea || chartArea.bottom === undefined || chartArea.top === undefined) {
+            return null; // Return null if context or area is not ready
+        }
+        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+        gradient.addColorStop(0, colorEnd);
+        gradient.addColorStop(1, colorStart);
+        return gradient;
+    }
+
+    // Definición de colores para las gráficas (usando la paleta de Oracle)
+    const chartColors = [
+        'var(--oracle-red-accent)', /* Rojo de acento de Oracle */
+        'var(--text-medium-grey)', /* Gris medio */
+        '#A83C3C', /* Rojo de acento */
+        'var(--success-text)', /* Verde suave */
+        'var(--warning-text)', /* Amarillo cálido */
+        'var(--text-dark-blue-grey)'  /* Azul grisáceo oscuro */
+    ];
+
+
+    // --- Fetch general system stats (KPIs and main charts) ---
+    function fetchSystemStats() {
+        if (isFetchingStats) {
+            return;
+        }
+        isFetchingStats = true;
+
+        fetch('/api/questionnaires/dashboard-stats/', {
+            headers: { 'Authorization': `Token ${token}` }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login/';
+                }
+                throw new Error('No se pudieron cargar las estadísticas del sistema.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update KPI values
+            totalQuestionnairesEl.textContent = data.total_questionnaires || 0;
+            totalSubmissionsEl.textContent = data.total_submissions || 0;
+            totalUsersEl.textContent = data.total_users || 0;
+
+            // --- Submissions Trend Chart ---
+            const trendCanvas = document.getElementById('submissions-trend-chart');
+            const trendFallback = document.getElementById('submissions-trend-fallback');
+            
+            if (trendCanvas && trendCanvas.getContext && data.submissions_trend && data.submissions_trend.labels && data.submissions_trend.data) {
+                trendFallback.style.display = 'none';
+
+                if (submissionsTrendChartInstance) {
+                    submissionsTrendChartInstance.data.labels = data.submissions_trend.labels;
+                    submissionsTrendChartInstance.data.datasets[0].data = data.submissions_trend.data;
+                    submissionsTrendChartInstance.data.datasets[0].backgroundColor = (context) => {
+                        const chart = context.chart;
+                        const { ctx, chartArea } = chart;
+                        return createChartGradient(ctx, chartArea, 'rgba(168,60,60,0.4)', 'rgba(168,60,60,0)'); /* Usando acento rojo */
+                    };
+                    submissionsTrendChartInstance.data.datasets[0].borderColor = chartColors[0]; /* Rojo de acento */
+                    submissionsTrendChartInstance.data.datasets[0].pointBackgroundColor = chartColors[0];
+                    submissionsTrendChartInstance.data.datasets[0].pointHoverBackgroundColor = chartColors[1]; /* Gris para hover */
+                    submissionsTrendChartInstance.update();
+                } else {
+                    submissionsTrendChartInstance = new Chart(trendCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: data.submissions_trend.labels,
+                            datasets: [{
+                                label: 'Respuestas',
+                                data: data.submissions_trend.data,
+                                fill: true,
+                                backgroundColor: (context) => {
+                                    const chart = context.chart;
+                                    const { ctx, chartArea } = chart;
+                                    return createChartGradient(ctx, chartArea, 'rgba(168,60,60,0.4)', 'rgba(168,60,60,0)'); /* Usando acento rojo */
+                                },
+                                borderColor: chartColors[0], /* Rojo de acento */
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointBackgroundColor: chartColors[0],
+                                pointBorderColor: '#fff',
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: chartColors[1] /* Gris para hover */
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    titleFont: { family: 'Poppins', size: 13, weight: 'bold' }, /* Fuente reducida */
+                                    bodyFont: { family: 'Roboto', size: 12 }, /* Fuente reducida */
+                                    displayColors: false,
+                                    callbacks: {
+                                        label: function(context) { return 'Respuestas: ' + context.raw; }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { font: { family: 'Roboto', size: 11 }, color: '#777' }, /* Fuente reducida */
+                                    grid: { display: false, drawBorder: false }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { font: { family: 'Roboto', size: 11 }, color: '#777' }, /* Fuente reducida */
+                                    grid: { color: '#f0f0f0', drawBorder: false }
+                                }
+                            }
+                        }
+                    });
+                }
+            } else {
+                trendFallback.style.display = 'block';
+                trendFallback.textContent = "No hay datos de tendencia disponibles.";
+                if (submissionsTrendChartInstance) {
+                    submissionsTrendChartInstance.destroy();
+                    submissionsTrendChartInstance = null;
+                }
+            }
+
+            // --- Questionnaire Type Chart (Pie Chart) ---
+            const typeCanvas = document.getElementById('questionnaire-type-chart');
+            const typeFallback = document.getElementById('questionnaire-type-fallback');
+            
+            if (typeCanvas && typeCanvas.getContext && data.questionnaire_type_distribution && data.questionnaire_type_distribution.labels && data.questionnaire_type_distribution.data) {
+                typeFallback.style.display = 'none';
+                
+                const pieChartColors = [
+                    chartColors[0], chartColors[1], chartColors[2], chartColors[3], chartColors[4], chartColors[5]
+                ]; 
+
+                if (questionnaireTypeChartInstance) {
+                    questionnaireTypeChartInstance.data.labels = data.questionnaire_type_distribution.labels;
+                    questionnaireTypeChartInstance.data.datasets[0].data = data.questionnaire_type_distribution.data;
+                    questionnaireTypeChartInstance.data.datasets[0].backgroundColor = pieChartColors.slice(0, data.questionnaire_type_distribution.labels.length);
+                    questionnaireTypeChartInstance.update();
+                } else {
+                    questionnaireTypeChartInstance = new Chart(typeCanvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.questionnaire_type_distribution.labels,
+                            datasets: [{
+                                data: data.questionnaire_type_distribution.data,
+                                backgroundColor: pieChartColors.slice(0, data.questionnaire_type_distribution.labels.length),
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        font: { family: 'Poppins', size: 11 }, /* Fuente reducida */
+                                        color: '#555'
+                                    }
+                                },
+                                tooltip: {
+                                    titleFont: { family: 'Poppins', size: 13, weight: 'bold' }, /* Fuente reducida */
+                                    bodyFont: { family: 'Roboto', size: 12 }, /* Fuente reducida */
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            return `${label}: ${value} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            } else {
+                typeFallback.style.display = 'block';
+                typeFallback.textContent = "No hay datos de distribución por tipo disponibles.";
+                if (questionnaireTypeChartInstance) {
+                    questionnaireTypeChartInstance.destroy();
+                    questionnaireTypeChartInstance = null;
+                }
+            }
+
+        })
+        .catch(error => {
+            console.error('Error al cargar las estadísticas del sistema:', error);
+            totalQuestionnairesEl.textContent = 'N/A';
+            totalSubmissionsEl.textContent = 'N/A';
+            totalUsersEl.textContent = 'N/A';
+            document.getElementById('submissions-trend-fallback').textContent = "Error al cargar los datos de tendencia.";
+            document.getElementById('questionnaire-type-fallback').textContent = "Error al cargar los datos de distribución.";
+            
+            if (submissionsTrendChartInstance) {
+                submissionsTrendChartInstance.destroy();
+                submissionsTrendChartInstance = null;
+            }
+            if (questionnaireTypeChartInstance) {
+                questionnaireTypeChartInstance.destroy();
+                questionnaireTypeChartInstance = null;
+            }
+        })
+        .finally(() => {
+            isFetchingStats = false;
+        });
+    }
+
+    // --- Fetch individual questionnaire list (existing functionality) ---
     function fetchQuestionnaires() {
         fetch('/api/questionnaires/', { headers: { 'Authorization': `Token ${token}` } })
         .then(response => {
@@ -55,29 +984,45 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!data) return;
             listContainer.innerHTML = '';
             if (data.length === 0) {
-                listContainer.innerHTML = '<p>Aún no has creado ningún cuestionario.</p>';
+                listContainer.innerHTML = '<p class="text-center text-muted col-span-full">Aún no has creado ningún cuestionario. ¡Crea el primero!</p>';
                 return;
             }
 
             data.forEach(q => {
                 const item = document.createElement('div');
-                item.className = 'list-group-item';
+                item.className = 'questionnaire-card';
+
+                const toggleChecked = q.is_active ? 'checked' : '';
+                
                 item.innerHTML = `
-                    <div class="d-flex w-100 justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-1">${q.title}</h5>
-                            <small>Código: <strong>${q.access_code}</strong></small>
+                    <div class="card-bg-effect"></div>
+                    <div class="card-content-wrapper">
+                        <div class="card-header-section">
+                            <h5 class="card-title-main">${q.title}</h5>
+                            <label class="toggle-switch" title="${q.is_active ? 'Desactivar' : 'Activar'} cuestionario">
+                                <input type="checkbox" class="toggle-btn" data-id="${q.id}" ${toggleChecked}>
+                                <span class="slider"></span>
+                            </label>
                         </div>
-                        <div>
-                            <span class="badge ${q.is_active ? 'bg-success' : 'bg-secondary'} me-2">${q.is_active ? 'Activo' : 'Inactivo'}</span>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-dark qr-btn" data-code="${q.access_code}">QR</button>
-                                <a href="/questionnaire/${q.id}/stats/" class="btn btn-sm btn-outline-info">Estadísticas</a>
-                                <a href="/edit-questionnaire/${q.id}/" class="btn btn-sm btn-outline-primary">Editar</a>
-                                <button class="btn btn-sm ${q.is_active ? 'btn-outline-warning' : 'btn-outline-success'} toggle-btn" data-id="${q.id}">
-                                    ${q.is_active ? 'Desactivar' : 'Activar'}
+                        <span class="card-meta-info">Código: <strong>${q.access_code}</strong></span>
+                        <div class="card-actions-section">
+                            <div class="card-mini-stats">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M32 32h448c17.7 0 32 14.3 32 32v384c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32V64c0-17.7 14.3-32 32-32zM160 384c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V192c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v192zm96 0c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V128c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v256zm96 0c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V256c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v128z"/></svg>
+                                <span>${q.total_submissions || 0} respuestas</span>
+                            </div>
+                            <div class="btn-action-group">
+                                <button class="btn-icon-custom qr" data-code="${q.access_code}" title="Ver QR">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M544 0H56c-13.3 0-24 10.7-24 24v464c0 13.3 10.7 24 24 24h488c13.3 0 24-10.7 24-24V24c0-13.3-10.7-24-24-24zM80 80h128v128H80V80zm288 0h128v128H368V80zM80 304h128v128H80V304zm288 0h128v128H368V304zM240 80h80v80h-80V80zm0 144h80v80h-80v-80zm0 144h80v80h-80v-80zm144-144h-80v80h80v-80zm-144 0h-80v80h80v-80zM384 432h-80v80h80v-80zM240 432h-80v80h80v-80z"/></svg>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${q.id}">Eliminar</button>
+                                <a href="/questionnaire/${q.id}/stats/" class="btn-icon-custom stats" title="Ver Estadísticas">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M32 32h448c17.7 0 32 14.3 32 32v384c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32V64c0-17.7 14.3-32 32-32zM160 384c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V192c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v192zm96 0c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V128c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v256zm96 0c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V256c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16v128z"/></svg>
+                                </a>
+                                <a href="/edit-questionnaire/${q.id}/" class="btn-icon-custom edit" title="Editar Cuestionario">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M471.6 21.7c-21.9-21.9-57.5-21.9-79.4 0L331.3 82.5l98.9 98.9 60.9-60.9c21.9-21.9 21.9-57.5 0-79.4L471.6 21.7zm-299.7 206c-1.3 1.3-2.6 2.6-3.8 3.8L35.2 411.7c-4.6 4.6-6.6 11-6.6 17.7V464c0 10.1 8.2 18.2 18.2 18.2H96c6.7 0 13.1-2.1 17.7-6.6l180.2-180.2c1.3-1.3 2.6-2.6 3.8-3.8L171.9 227.7zM286.9 203c-6.1-6.1-16-6.1-22.1 0L35.2 411.7c-4.6 4.6-6.6 11-6.6 17.7V464c0 10.1 8.2 18.2 18.2 18.2H96c6.7 0 13.1-2.1 17.7-6.6l180.2-180.2c1.3-1.3 2.6-2.6 3.8-3.8L286.9 203z"/></svg>
+                                </a>
+                                <button class="btn-icon-custom delete" data-id="${q.id}" data-title="${q.title}" title="Eliminar Cuestionario">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M135.2 17.7C140.6 6.5 152 0 164.8 0H283.2c12.8 0 24.2 6.5 29.6 17.7L330.9 64H400c17.7 0 32 14.3 32 32s-14.3 32-32 32H48c-17.7 0-32-14.3-32-32s14.3-32 32-32h69.1L135.2 17.7zM248 248V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm-96 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zm192 0V408c0 8.8-7.2 16-16 16s-16-7.2-16-16V248c0-8.8 7.2-16 16-16s16 7.2 16 16zM416 128H32v320c0 35.3 28.7 64 64 64H352c35.3 0 64-28.7 64-64V128z"/></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -87,55 +1032,92 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Manejador de eventos para toda la lista
+    // Manejador de eventos para toda la lista (delegación de eventos)
     listContainer.addEventListener('click', function(event) {
         const target = event.target;
-        
+        const clickedElement = target.closest('.btn-icon-custom, .toggle-btn');
+        if (!clickedElement) return;
+
         // --- Lógica para el botón QR ---
-        if (target.classList.contains('qr-btn')) {
-            const accessCode = target.dataset.code;
+        if (clickedElement.classList.contains('qr')) {
+            const accessCode = clickedElement.dataset.code;
             const urlToShare = `${window.location.origin}/form/${accessCode}/`;
             
-            // Preparamos el modal
             const qrContainer = document.getElementById('qrcode-container');
             const qrUrlInput = document.getElementById('qr-url-input');
             
-            qrContainer.innerHTML = ''; // Limpiamos cualquier QR anterior
+            qrContainer.innerHTML = '';
             qrUrlInput.value = urlToShare;
             
-            // Generamos el nuevo QR
             new QRCode(qrContainer, {
                 text: urlToShare,
                 width: 200,
                 height: 200,
+                colorDark : getComputedStyle(document.documentElement).getPropertyValue('--oracle-red-accent').trim(), /* Usar variable CSS */
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
             });
             
-            // Mostramos el modal
             qrModal.show();
         }
 
-        // --- Lógica para los otros botones ---
-        const questionnaireId = target.dataset.id;
-        if (!questionnaireId) return;
-
-        if (target.classList.contains('toggle-btn')) {
+        // --- Lógica para el toggle switch ---
+        if (clickedElement.classList.contains('toggle-btn')) {
+            const questionnaireId = clickedElement.dataset.id;
             fetch(`/api/questionnaires/${questionnaireId}/toggle-active/`, {
                 method: 'POST',
                 headers: { 'Authorization': `Token ${token}` }
-            }).then(() => { fetchQuestionnaires(); });
+            }).then(() => { 
+                fetchQuestionnaires();
+            })
+            .catch(error => {
+                console.error('Error al cambiar estado:', error);
+                clickedElement.checked = !clickedElement.checked;
+                alert('Hubo un error al cambiar el estado del cuestionario.');
+            });
         }
 
-        if (target.classList.contains('delete-btn')) {
-            if (confirm('¿Estás seguro de que quieres eliminar este cuestionario?')) {
-                fetch(`/api/questionnaires/${questionnaireId}/`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Token ${token}` }
-                }).then(() => { fetchQuestionnaires(); });
-            }
+        // --- Lógica para ELIMINAR (activar modal de confirmación) ---
+        if (clickedElement.classList.contains('delete')) {
+            questionnaireIdToDelete = clickedElement.dataset.id;
+            const questionnaireTitleToDelete = clickedElement.dataset.title;
+            confirmQuestionnaireTitleSpan.textContent = questionnaireTitleToDelete;
+            confirmDeleteQuestionnaireModal.show();
         }
     });
 
-    fetchQuestionnaires();
+    // Manejar el clic en el botón "Eliminar" del modal de confirmación
+    confirmDeleteQuestionnaireBtn.addEventListener('click', () => {
+        if (questionnaireIdToDelete) {
+            fetch(`/api/questionnaires/${questionnaireIdToDelete}/`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Token ${token}` }
+            })
+            .then(response => {
+                if (response.ok) {
+                    confirmDeleteQuestionnaireModal.hide();
+                    fetchQuestionnaires();
+                } else {
+                    return response.json().then(errorData => {
+                        confirmDeleteQuestionnaireModal.hide();
+                        alert(errorData.detail || `No se pudo eliminar el cuestionario con ID ${questionnaireIdToDelete}.`);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al eliminar cuestionario:', error);
+                confirmDeleteQuestionnaireModal.hide();
+                alert('Ocurrió un error de red al intentar eliminar el cuestionario.');
+            });
+        }
+    });
+
+    // Llama a las funciones al cargar la página y establece la actualización automática
+    fetchSystemStats(); // Llamar para cargar las estadísticas generales
+    fetchQuestionnaires(); // Llamar para cargar la lista de cuestionarios
+    setInterval(fetchSystemStats, 10000); // Actualizar estadísticas generales cada 10 segundos
+    // setInterval(fetchQuestionnaires, 15000); // Opcional: Actualizar cuestionarios cada 15 segundos si es necesario
 });
+
 </script>
 {% endblock %}
