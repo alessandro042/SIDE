@@ -128,26 +128,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionnaireId = {{ questionnaire_id }};
     const token = localStorage.getItem('authToken');
     const titleEl = document.getElementById('questionnaire-title');
-    const container = document.getElementById('charts-container'); // Cambiado a charts-container
-    let charts = {}; // Para almacenar las instancias de Chart.js
+    const container = document.getElementById('charts-container');
+    let charts = {}; 
+    let previousData = null;
 
-    // Proteger la página: si no hay token, redirigir al login.
     if (!token) {
         window.location.href = '/login/';
         return;
     }
 
-    // Definición de colores para las gráficas (usando la paleta de Oracle)
+    // --- Paleta de colores y funciones de ayuda (sin cambios) ---
     const chartColors = [
-        '#007ACC', // Azul de Oracle
-        '#E60000', // Rojo de Oracle
-        '#17a2b8', // Azul turquesa (para acento)
-        '#28a745', // Verde (para éxito/opciones extra)
-        '#ffc107', // Amarillo (para advertencia/opciones extra)
-        '#6c757d'  // Gris (para opciones extra)
+        '#007ACC', '#E60000', '#17a2b8', '#28a745', '#ffc107', '#6c757d'
     ];
 
-    // Función para crear gradientes dinámicamente para las barras
     function createGradient(ctx, chartArea, colorStart, colorEnd) {
         if (!ctx || !chartArea) return;
         const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
@@ -155,185 +149,9 @@ document.addEventListener('DOMContentLoaded', function() {
         gradient.addColorStop(1, colorStart);
         return gradient;
     }
-
-    function fetchStats() {
-        // Obtenemos los detalles del cuestionario (título)
-        fetch(`/api/questionnaires/${questionnaireId}/`, {
-            headers: { 'Authorization': `Token ${token}` }
-        })
-        .then(response => {
-            if (!response.ok) { 
-                // Si el token es inválido o el cuestionario no se encuentra, redirigir
-                if (response.status === 401 || response.status === 404) {
-                    localStorage.removeItem('authToken');
-                    window.location.href = '/login/';
-                }
-                throw new Error('Cuestionario no encontrado o acceso denegado.');
-            }
-            return response.json();
-        })
-        .then(data => {
-            titleEl.textContent = `Estadísticas de: ${data.title}`;
-        })
-        .catch(error => {
-            console.error("Error obteniendo el título del cuestionario:", error);
-            // Ya manejado el redireccionamiento arriba si es 401/404
-            titleEl.textContent = `Error al cargar el título de las estadísticas.`;
-        });
-
-        // Obtenemos los datos de las estadísticas
-        fetch(`/api/questionnaires/${questionnaireId}/stats/`, {
-            headers: { 'Authorization': `Token ${token}` }
-        })
-        .then(response => {
-            if (!response.ok) {
-                 // Si el token es inválido o la URL de stats no se encuentra
-                if (response.status === 401 || response.status === 404) {
-                    localStorage.removeItem('authToken');
-                    window.location.href = '/login/';
-                }
-                throw new Error('No se pudieron cargar las estadísticas.');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (Object.keys(data).length === 0) {
-                container.innerHTML = '<p class="text-center text-muted">Aún no hay respuestas para este cuestionario.</p>';
-                return;
-            }
-
-            // Destruir gráficos existentes antes de volver a dibujar
-            for (const qId in charts) {
-                if (charts[qId]) {
-                    charts[qId].destroy();
-                }
-            }
-            charts = {}; // Reiniciar el objeto de gráficos
-
-            container.innerHTML = ''; // Limpiar "cargando..." solo si hay datos
-
-            let colorIndex = 0; // Para rotar a través de los colores
-
-            for (const qId in data) {
-                const questionData = data[qId];
-                
-                const card = document.createElement('div');
-                card.className = 'chart-card mb-4'; // Usar la clase de tarjeta personalizada
-                
-                const cardHeader = document.createElement('div');
-                cardHeader.className = 'card-header';
-                cardHeader.textContent = questionData.question_text;
-                card.appendChild(cardHeader);
-
-                const canvasContainer = document.createElement('div');
-                canvasContainer.className = 'card-body';
-                const canvas = document.createElement('canvas');
-                canvasContainer.appendChild(canvas);
-                card.appendChild(canvasContainer);
-                container.appendChild(card);
-
-                // Preparar los colores de las barras con gradiente
-                const barBackgroundColors = questionData.options.map((opt, index) => {
-                    const ctx = canvas.getContext('2d');
-                    const chartArea = { bottom: 0, top: 0 }; // Se definirá correctamente cuando Chart.js dibuje
-                    
-                    // Rotar a través de los colores base definidos
-                    const currentColor = chartColors[(colorIndex + index) % chartColors.length];
-                    const darkerColor = darkenColor(currentColor, 20); // Función para oscurecer el color para el gradiente
-
-                    // Retorna una función para que Chart.js la llame en el momento de dibujar
-                    return function(context) {
-                        const chart = context.chart;
-                        const { chartArea } = chart;
-
-                        if (!chartArea) { return null; } // Asegura que chartArea esté definido
-
-                        return createGradient(context.chart.ctx, chartArea, currentColor, darkerColor);
-                    };
-                });
-                
-                colorIndex = (colorIndex + questionData.options.length) % chartColors.length; // Avanza el índice para la siguiente pregunta
-
-                charts[qId] = new Chart(canvas, {
-                    type: 'bar',
-                    data: {
-                        labels: questionData.options.map(opt => opt.option_text),
-                        datasets: [{
-                            label: 'Votos',
-                            data: questionData.options.map(opt => opt.votes),
-                            backgroundColor: barBackgroundColors, // Asignamos los gradientes/colores
-                            borderColor: 'transparent', // Barras sin borde visible
-                            borderWidth: 0,
-                            borderRadius: 6, // Bordes redondeados para las barras
-                            barThickness: 'flex', // Ajuste flexible del grosor de la barra
-                            maxBarThickness: 30 // Grosor máximo para las barras
-                        }]
-                    },
-                    options: { 
-                        responsive: true,
-                        maintainAspectRatio: false, // Permitir que la altura fija del card-body controle el tamaño
-                        indexAxis: 'y', // Gráfico de barras horizontal
-                        animation: {
-                            duration: 1000, // Duración de la animación de carga
-                            easing: 'easeOutQuart' // Tipo de easing
-                        },
-                        scales: { 
-                            x: { 
-                                beginAtZero: true,
-                                ticks: {
-                                    font: { family: 'Roboto', size: 12 }, // Fuente para los números del eje X
-                                    color: '#777' // Color de los números
-                                },
-                                grid: {
-                                    display: false, // Ocultar líneas de la cuadrícula X
-                                    drawBorder: false // Ocultar borde del eje X
-                                }
-                            },
-                            y: { 
-                                ticks: {
-                                    font: { family: 'Poppins', size: 13, weight: 'bold' }, // Fuente para las etiquetas del eje Y
-                                    color: '#555' // Color de las etiquetas
-                                },
-                                grid: {
-                                    display: false, // Ocultar líneas de la cuadrícula Y
-                                    drawBorder: false // Ocultar borde del eje Y
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false // Ocultar la leyenda "Votos"
-                            },
-                            tooltip: {
-                                enabled: true, // Habilitar tooltips
-                                backgroundColor: 'rgba(0, 0, 0, 0.7)', // Fondo oscuro
-                                titleFont: { family: 'Poppins', size: 14, weight: 'bold' },
-                                bodyFont: { family: 'Roboto', size: 13 },
-                                padding: 10,
-                                displayColors: false, // Ocultar el cuadrito de color en el tooltip
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) { label += ': '; }
-                                        label += new Intl.NumberFormat('es-MX').format(context.raw); // Formato de número
-                                        return label;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            console.error("Error al cargar las estadísticas:", error);
-            container.innerHTML = '<p class="text-center text-danger">Error al cargar las estadísticas. Verifica tu conexión o los permisos.</p>';
-        });
-    }
-
-    // Función para oscurecer un color (para gradientes)
+    
     function darkenColor(hex, percent) {
-        var f = parseInt(hex.slice(1), 16),
+        let f = parseInt(hex.slice(1), 16),
             t = percent < 0 ? 0 : 255,
             p = percent < 0 ? percent * -1 : percent,
             R = f >> 16,
@@ -343,11 +161,160 @@ document.addEventListener('DOMContentLoaded', function() {
             .toString(16)
             .slice(1);
     }
+    // --- Fin de funciones de ayuda ---
 
 
-    fetchStats(); // Llamar al inicio
-    setInterval(fetchStats, 5000); // Actualizar cada 5 segundos
+    function fetchStats() {
+        // La obtención del título no necesita cambiar
+        if (titleEl.textContent === 'Cargando estadísticas...') {
+            fetch(`/api/questionnaires/${questionnaireId}/`, {
+                headers: { 'Authorization': `Token ${token}` }
+            })
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(data => {
+                titleEl.textContent = `Estadísticas de: ${data.title}`;
+            })
+            .catch(() => {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login/';
+            });
+        }
+
+        // Obtención de datos de estadísticas
+        fetch(`/api/questionnaires/${questionnaireId}/stats/`, {
+            headers: { 'Authorization': `Token ${token}` }
+        })
+        .then(response => response.ok ? response.json() : Promise.reject(response))
+        .then(data => {
+            // Si los datos no han cambiado, no hacemos nada.
+            if (JSON.stringify(data) === JSON.stringify(previousData)) {
+                return; 
+            }
+
+            // Si es la primera carga y no hay datos, mostramos un mensaje.
+            if (Object.keys(data).length === 0 && previousData === null) {
+                container.innerHTML = '<p class="text-center text-muted">Aún no hay respuestas para este cuestionario.</p>';
+                previousData = data; // Guardamos el estado "vacío"
+                return;
+            }
+
+            // --- LÓGICA DE ACTUALIZACIÓN INTELIGENTE ---
+            
+            const newQuestionIds = new Set(Object.keys(data));
+
+            // 1. PASO DE ELIMINACIÓN:
+            // Buscamos gráficas que ya no existen en los datos nuevos y las eliminamos.
+            for (const qId in charts) {
+                if (!newQuestionIds.has(qId)) {
+                    charts[qId].destroy();
+                    const cardToRemove = document.getElementById(`chart-card-${qId}`);
+                    if (cardToRemove) {
+                        cardToRemove.remove();
+                    }
+                    delete charts[qId];
+                }
+            }
+
+            // 2. PASO DE ACTUALIZACIÓN Y CREACIÓN:
+            // Recorremos los datos nuevos.
+            let colorIndex = 0;
+            for (const qId in data) {
+                const questionData = data[qId];
+                
+                // Si la gráfica ya existe, solo actualizamos sus datos.
+                if (charts[qId]) {
+                    const chart = charts[qId];
+                    chart.data.labels = questionData.options.map(opt => opt.option_text);
+                    chart.data.datasets[0].data = questionData.options.map(opt => opt.votes);
+                    chart.update(); // Animación suave de actualización
+                } 
+                // Si la gráfica no existe, la creamos desde cero.
+                else {
+                    const card = document.createElement('div');
+                    card.className = 'chart-card mb-4';
+                    card.id = `chart-card-${qId}`; // Asignamos un ID único a la tarjeta
+
+                    const cardHeader = document.createElement('div');
+                    cardHeader.className = 'card-header';
+                    cardHeader.textContent = questionData.question_text;
+                    card.appendChild(cardHeader);
+
+                    const canvasContainer = document.createElement('div');
+                    canvasContainer.className = 'card-body';
+                    const canvas = document.createElement('canvas');
+                    canvasContainer.appendChild(canvas);
+                    card.appendChild(canvasContainer);
+                    
+                    // La añadimos al final del contenedor
+                    container.appendChild(card);
+
+                    const barBackgroundColors = questionData.options.map((opt, index) => {
+                        const currentColor = chartColors[(colorIndex + index) % chartColors.length];
+                        const darkerColor = darkenColor(currentColor, 20);
+                        return (context) => {
+                            const { chart } = context;
+                            if (!chart.chartArea) return null;
+                            return createGradient(chart.ctx, chart.chartArea, currentColor, darkerColor);
+                        };
+                    });
+                    
+                    colorIndex = (colorIndex + questionData.options.length) % chartColors.length;
+
+                    charts[qId] = new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: questionData.options.map(opt => opt.option_text),
+                            datasets: [{
+                                label: 'Votos',
+                                data: questionData.options.map(opt => opt.votes),
+                                backgroundColor: barBackgroundColors,
+                                borderColor: 'transparent',
+                                borderWidth: 0,
+                                borderRadius: 6,
+                                barThickness: 'flex',
+                                maxBarThickness: 30
+                            }]
+                        },
+                        options: { 
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            animation: { duration: 1000, easing: 'easeOutQuart' },
+                            scales: { 
+                                x: { beginAtZero: true, ticks: { font: { family: 'Roboto', size: 12 }, color: '#777' }, grid: { display: false, drawBorder: false }},
+                                y: { ticks: { font: { family: 'Poppins', size: 13, weight: 'bold' }, color: '#555' }, grid: { display: false, drawBorder: false }}
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                    titleFont: { family: 'Poppins', size: 14, weight: 'bold' },
+                                    bodyFont: { family: 'Roboto', size: 13 },
+                                    padding: 10,
+                                    displayColors: false,
+                                    callbacks: {
+                                        label: (context) => `Votos: ${new Intl.NumberFormat('es-MX').format(context.raw)}`
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Finalmente, actualizamos los datos de referencia.
+            previousData = data;
+        })
+        .catch(error => {
+            console.error("Error al cargar las estadísticas:", error);
+            // No limpiamos el contenedor para no perder la vista en un error de red temporal
+        });
+    }
+
+    // --- Llamadas iniciales (sin cambios) ---
+    fetchStats();
+    setInterval(fetchStats, 5000);
 });
-
 </script>
 {% endblock %}

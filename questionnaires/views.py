@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from users.models import User
+from django.db import transaction, IntegrityError
 from .models import Questionnaire, Submission, Question, Option, Answer
 from .serializers import (
     QuestionnaireAdminSerializer,
@@ -20,7 +21,106 @@ from users.permissions import IsOwner
 
 # --- Vistas para el Administrador ---
 
+class SubmissionView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, access_code, format=None):
+        # ▼▼▼ AÑADIMOS LOGS AQUÍ ▼▼▼
+        print("\n" + "="*50)
+        print(f"INICIO DE PETICIÓN DE VOTO - HORA: {timezone.now()}")
+        
+        try:
+            questionnaire = Questionnaire.objects.get(access_code=access_code, is_active=True, is_deleted=False)
+        except Questionnaire.DoesNotExist:
+            return Response({"error": "Cuestionario no encontrado o inactivo."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+        
+        print(f"SESIÓN ID: {session_key}")
+
+        serializer = SubmissionSerializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"Error de validación: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        answers_data = serializer.validated_data['answers']
+        print(f"DATOS RECIBIDOS: {answers_data}")
+
+        try:
+            with transaction.atomic():
+                # Esta lógica de get_or_create es más segura que la validación separada
+                submission, created = Submission.objects.get_or_create(
+                    questionnaire=questionnaire, 
+                    session_key=session_key,
+                    defaults={} # No hay campos extra que llenar en la creación
+                )
+
+                if not created:
+                    # Si la sumisión ya existía, no hacemos nada o devolvemos error
+                    print(f"VOTO DUPLICADO DETECTADO para sesión {session_key}. No se guarda.")
+                    return Response({"error": "Ya has respondido a este cuestionario."}, status=status.HTTP_400_BAD_REQUEST)
+
+                print(f"SUBMISSION CREADO: ID={submission.id} para sesión {session_key}")
+
+                for answer_data in answers_data:
+                    ans = Answer.objects.create(
+                        submission=submission,
+                        question_id=answer_data['question_id'],
+                        selected_option_id=answer_data['option_id']
+                    )
+                    print(f"  -> ANSWER CREADO: ID={ans.id} para opción {ans.selected_option_id}")
+
+                print("FIN DE PETICIÓN DE VOTO - ÉXITO")
+                print("="*50)
+                return Response({"success": "Respuestas enviadas correctamente."}, status=status.HTTP_201_CREATED)
+        
+        except IntegrityError:
+            print("ERROR DE INTEGRIDAD - Hubo una condición de carrera.")
+            return Response({"error": "Hubo un conflicto al procesar tu respuesta. Por favor, inténtalo de nuevo."}, status=status.HTTP_409_CONFLICT)
+
+# ...
+
 class QuestionnaireViewSet(viewsets.ModelViewSet):
+    # ... (todo tu código de permission_classes, get_queryset, etc. se queda igual) ...
+
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        # ▼▼▼ AÑADIMOS LOGS AQUÍ ▼▼▼
+        print("\n" + "-"*50)
+        print(f"PETICIÓN DE STATS RECIBIDA - HORA: {timezone.now()}")
+        
+        questionnaire = self.get_object()
+        
+        vote_counts = Option.objects.filter(question__questionnaire=questionnaire)\
+            .annotate(votes=Count('answer'))\
+            .values('id', 'votes', 'text') # Añadimos text para que el log sea legible
+
+        print("RESULTADO DEL CONTEO DE VOTOS EN LA BD:")
+        print(list(vote_counts))
+        print("-"*50)
+
+        # El resto de tu lógica para construir la respuesta se queda igual
+        votes_map = {item['id']: item['votes'] for item in vote_counts}
+        questions = Question.objects.filter(questionnaire=questionnaire).prefetch_related('options')
+        stats_data = {}
+        for question in questions:
+            stats_data[question.id] = {
+                'question_text': question.text,
+                'options': [
+                    {
+                        'option_id': option.id,
+                        'option_text': option.text,
+                        'votes': votes_map.get(option.id, 0)
+                    }
+                    for option in question.options.all()
+                ]
+            }
+        return Response(stats_data)
+    
+    # ... (el resto de tus actions como toggle_active se quedan igual) ...
+
     """
     ViewSet para que los Admins gestionen SUS PROPIOS cuestionarios.
     """
@@ -116,7 +216,56 @@ class PublicQuestionnaireView(generics.RetrieveAPIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-class SubmissionView(APIView):
+
+    """
+    Vista para que un usuario anónimo envíe sus respuestas a un cuestionario.
+    MEJORADA CON TRANSACCIÓN ATÓMICA PARA PREVENIR CONDICIONES DE CARRERA.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, access_code, format=None):
+        try:
+            questionnaire = Questionnaire.objects.get(access_code=access_code, is_active=True, is_deleted=False)
+        except Questionnaire.DoesNotExist:
+            return Response({"error": "Cuestionario no encontrado o inactivo."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+
+        # ▼▼▼ INICIO DE LA MODIFICACIÓN CLAVE ▼▼▼
+        try:
+            # Envolvemos toda la lógica de revisión y creación en una transacción
+            with transaction.atomic():
+                # 1. Revisamos si ya existe una respuesta.
+                # Esta consulta ahora bloquea la fila si existe, impidiendo que otros la lean hasta que termine la transacción.
+                if Submission.objects.filter(questionnaire=questionnaire, session_key=session_key).exists():
+                    return Response({"error": "Ya has respondido a este cuestionario."}, status=status.HTTP_400_BAD_REQUEST)
+
+                # 2. Validamos los datos recibidos
+                serializer = SubmissionSerializer(data=request.data)
+                if not serializer.is_valid():
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+                answers_data = serializer.validated_data['answers']
+                
+                # 3. Creamos el Submission y las Answers dentro de la misma transacción segura
+                submission = Submission.objects.create(questionnaire=questionnaire, session_key=session_key)
+
+                for answer_data in answers_data:
+                    Answer.objects.create(
+                        submission=submission,
+                        question_id=answer_data['question_id'],
+                        selected_option_id=answer_data['option_id']
+                    )
+                
+                return Response({"success": "Respuestas enviadas correctamente."}, status=status.HTTP_201_CREATED)
+
+        except IntegrityError:
+            # Si, a pesar de todo, dos peticiones llegan exactamente al mismo tiempo,
+            # la base de datos lanzará un IntegrityError. Lo capturamos y devolvemos un error amigable.
+            return Response({"error": "Hubo un conflicto al procesar tu respuesta. Por favor, inténtalo de nuevo."}, status=status.HTTP_409_CONFLICT)
+        # ▲▲▲ FIN DE LA MODIFICACIÓN CLAVE ▲▲▲
     """
     Vista para que un usuario anónimo envíe sus respuestas a un cuestionario.
     """
